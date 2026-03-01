@@ -18,6 +18,7 @@ urlpatterns = [
     path('packages/',     include('apps.packages.urls')),
     path('testimonials/', include('apps.testimonials.urls')),
     path('social/',       include('apps.social.urls')),
+    path('nearby/',       include('apps.nearby.urls')),
 
     # Users & groups
     path('users/', include('apps.accounts.urls')),

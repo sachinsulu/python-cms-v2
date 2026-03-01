@@ -26,7 +26,9 @@ INSTALLED_APPS = [
     'apps.packages',
     'apps.testimonials',
     'apps.social',
+    'apps.nearby',
     'api',
+
 ]
 
 MIDDLEWARE = [

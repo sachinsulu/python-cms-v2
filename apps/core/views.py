@@ -61,6 +61,7 @@ class DashboardView(View):
         from apps.articles.models    import Article
         from apps.blog.models        import Blog
         from apps.testimonials.models import Testimonial
+        from apps.nearby.models      import Nearby
 
         ctx = {'stats': stats}
         if user.is_superuser or user.has_perm('articles.view_article'):
@@ -69,6 +70,8 @@ class DashboardView(View):
             ctx['recent_blogs'] = Blog.objects.order_by('-updated_at')[:5]
         if user.is_superuser or user.has_perm('testimonials.view_testimonial'):
             ctx['recent_testimonials'] = Testimonial.objects.order_by('-created_at')[:5]
+        if user.is_superuser or user.has_perm('nearby.view_nearby'):
+            ctx['recent_nearby'] = Nearby.objects.order_by('-updated_at')[:5]
 
         return render(request, 'dashboard.html', ctx)
 

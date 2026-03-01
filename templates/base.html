@@ -82,6 +82,13 @@
         <i class="nav-icon fa-solid fa-share-nodes"></i> Social / OTA
       </a>
       {% endif %}
+
+      {% if request.user.is_superuser or perms.nearby.view_nearby %}
+      <a href="{% url 'nearby_list' %}"
+         class="sidebar-link {% if 'nearby' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-map-marker"></i> Nearby
+      </a>
+      {% endif %}
     </div>
 
     {% if request.user.is_superuser %}

@@ -6,8 +6,7 @@ class TestimonialForm(forms.ModelForm):
     class Meta:
         model  = Testimonial
         fields = ['title', 'name', 'content', 'rating', 'image',
-                  'country', 'linksrc', 'via_type',
-                  'meta_title', 'meta_description', 'meta_keywords']
+                  'country', 'linksrc', 'via_type']
         widgets = {
             'title':   forms.TextInput(attrs={'placeholder': 'Review title'}),
             'name':    forms.TextInput(attrs={'placeholder': 'Reviewer name'}),

@@ -108,5 +108,31 @@
   </div>
   {% endif %}
 
+  {% if recent_nearby %}
+  <div class="card">
+    <div class="card-header">
+      <span style="font-weight:600; font-size:13.5px;"><i class="fa-solid fa-map-marker" style="color:var(--blue); margin-right:6px;"></i>Recent Nearby Places</span>
+      <a href="{% url 'nearby_list' %}" class="btn btn-secondary btn-sm">View all</a>
+    </div>
+    <div style="overflow:hidden;">
+      <table class="cms-table">
+        <thead><tr><th>Title</th><th>Distance</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for n in recent_nearby %}
+          <tr>
+            <td><a href="{% url 'nearby_edit' n.slug %}">{{ n.title|truncatechars:40 }}</a></td>
+            <td>{{ n.distance|default:"-" }}</td>
+            <td>
+              {% if n.is_active %}<span class="badge badge-green">Active</span>
+              {% else %}<span class="badge badge-gray">Inactive</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

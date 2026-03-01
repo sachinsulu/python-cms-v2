@@ -7,3 +7,4 @@ class SocialAdmin(admin.ModelAdmin):
     list_filter  = ('type', 'is_active')
     search_fields = ('title', 'link')
     prepopulated_fields = {'slug': ('title',)}
+    exclude = ('meta_title', 'meta_description', 'meta_keywords')
