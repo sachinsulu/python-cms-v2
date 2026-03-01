@@ -6,6 +6,7 @@ from .forms import PackageForm, SubPackageForm
 
 class PackageListView(ContentListView):
     model               = Package
+    template            = 'packages/list.html'
     permission_required = 'packages.view_package'
     page_title          = 'Packages'
     create_url          = 'package_create'
@@ -46,11 +47,11 @@ class SubPackageListView(ContentListView):
         self.kwargs = {'package_slug': package_slug}
         package = self.get_package()
         from django.shortcuts import render
-        return render(request, 'generic/list.html', {
+        return render(request, 'packages/subpackage_list.html', {
             'list':       self.get_queryset(),
             'model_key':  'subpackage',
             'page_title': f'{package.title} — Sub-Packages',
-            'create_url': 'subpackage_create',
+            'create_url': None,
             'parent':     package,
         })
 
@@ -75,10 +76,16 @@ class SubPackageCreateView(ContentCreateView):
 
     def get(self, request, package_slug):
         self.kwargs = {'package_slug': package_slug}
+        package = self.get_package()
+        from django.urls import reverse
+        self.extra_context['back_url'] = reverse('subpackage_list', kwargs={'package_slug': package.slug})
         return super().get(request)
 
     def post(self, request, package_slug):
         self.kwargs = {'package_slug': package_slug}
+        package = self.get_package()
+        from django.urls import reverse
+        self.extra_context['back_url'] = reverse('subpackage_list', kwargs={'package_slug': package.slug})
         return super().post(request)
 
 
@@ -99,8 +106,14 @@ class SubPackageUpdateView(ContentUpdateView):
 
     def get(self, request, package_slug, slug):
         self.kwargs = {'package_slug': package_slug}
+        package = self.get_package()
+        from django.urls import reverse
+        self.extra_context['back_url'] = reverse('subpackage_list', kwargs={'package_slug': package.slug})
         return super().get(request, slug)
 
     def post(self, request, package_slug, slug):
         self.kwargs = {'package_slug': package_slug}
+        package = self.get_package()
+        from django.urls import reverse
+        self.extra_context['back_url'] = reverse('subpackage_list', kwargs={'package_slug': package.slug})
         return super().post(request, slug)

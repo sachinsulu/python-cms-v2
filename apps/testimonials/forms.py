@@ -13,4 +13,6 @@ class TestimonialForm(forms.ModelForm):
             'name':    forms.TextInput(attrs={'placeholder': 'Reviewer name'}),
             'content': forms.Textarea(attrs={'rows': 6}),
             'rating':  forms.NumberInput(attrs={'min': 1, 'max': 5}),
+            'via_type': forms.TextInput(attrs={'placeholder': 'e.g. Booking, Google, Direct'}),
+            'linksrc':  forms.TextInput(attrs={'placeholder': 'Source URL or reference link'}),
         }

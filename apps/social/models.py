@@ -7,7 +7,7 @@ class Social(BaseContentModel):
     TYPE_OTA    = 'ota'
     TYPE_CHOICES = [(TYPE_SOCIAL, 'Social Media'), (TYPE_OTA, 'OTA / Booking')]
 
-    link  = models.URLField()
+    link  = models.CharField(max_length=500)
     image = models.ImageField(upload_to='social/', blank=True, null=True)
     icon  = models.CharField(max_length=100, blank=True,
                 help_text='Font Awesome class e.g. fa-brands fa-instagram')

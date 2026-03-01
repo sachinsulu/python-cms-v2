@@ -8,7 +8,7 @@
   <div class="text-muted text-sm">{{ obj.name }}</div>
 </td>
 <td>{% for i in "12345" %}{% if forloop.counter <= obj.rating %}⭐{% endif %}{% endfor %}</td>
-<td><span class="badge badge-gray">{{ obj.get_via_type_display }}</span></td>
+<td><span class="badge badge-gray">{{ obj.via_type }}</span></td>
 <td>
   <div class="toggle-wrap" data-toggle-url="/core/toggle/testimonial/{{ obj.pk }}/">
     <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>

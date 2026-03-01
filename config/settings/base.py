@@ -1,6 +1,6 @@
 from pathlib import Path
+# Forcing server reload for admin registration
 import os
-# Triggering server reload
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent

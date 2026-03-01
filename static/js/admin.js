@@ -15,7 +15,6 @@ const CONFIG = {
     allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']
   },
   limits: {
-    'id_title': 100,
     'id_meta_title': 60,
     'id_meta_description': 160,
     'id_meta_keywords': 205

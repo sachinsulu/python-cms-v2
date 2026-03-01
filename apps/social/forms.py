@@ -10,6 +10,6 @@ class SocialForm(forms.ModelForm):
         fields = ['title', 'link', 'image', 'icon']
         widgets = {
             'title': forms.TextInput(attrs={'placeholder': 'e.g. Instagram'}),
-            'link':  forms.URLInput(attrs={'placeholder': 'https://'}),
+            'link':  forms.TextInput(attrs={'placeholder': 'Enter social link or reference'}),
             'icon':  forms.TextInput(attrs={'placeholder': 'fa-brands fa-instagram'}),
         }

@@ -141,3 +141,13 @@ class GroupEditView(SuperuserRequiredMixin, View):
             messages.success(request, 'Group updated.')
             return redirect('group_list')
         return render(request, 'users/group_form.html', {'form': form, 'is_edit': True, 'object': group})
+
+
+@method_decorator(login_required, name='dispatch')
+class GroupDeleteView(SuperuserRequiredMixin, View):
+    def post(self, request, pk):
+        group = get_object_or_404(Group, pk=pk)
+        group_name = group.name
+        group.delete()
+        messages.success(request, f'Group "{group_name}" deleted.')
+        return redirect('group_list')

@@ -15,7 +15,11 @@
         <td class="text-muted text-sm">{{ g.permissions.count }} permission{{ g.permissions.count|pluralize }}</td>
         <td>
           <div class="action-group">
-            <a href="{% url 'group_edit' g.pk %}" class="action-btn edit"><i class="fa-solid fa-pen"></i></a>
+            <a href="{% url 'group_edit' g.pk %}" class="action-btn edit" title="Edit"><i class="fa-solid fa-pen"></i></a>
+            <button class="action-btn delete" title="Delete" 
+                    onclick="openDeleteModal('{% url 'group_delete' g.pk %}', '{{ g.name|escapejs }}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
           </div>
         </td>
       </tr>

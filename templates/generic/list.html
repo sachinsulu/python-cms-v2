@@ -41,7 +41,6 @@
         <th>Title</th>
         <th>Slug</th>
         <th>Status</th>
-        <th>Updated</th>
         <th>Actions</th>
         {% endblock %}
       </tr>
@@ -63,9 +62,6 @@
                title="Toggle status">
             <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
           </div>
-        </td>
-        <td class="text-muted text-sm">
-          {% if obj.updated_at %}{{ obj.updated_at|timesince }} ago{% endif %}
         </td>
         <td>
           <div class="action-group">
