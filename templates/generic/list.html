@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    {{ page_title }}
+    <span class="page-title-sub">{{ list|length }} item{{ list|length|pluralize }}</span>
+  </h1>
+
+  <div class="flex items-center gap-2">
+    {% block header_extras %}{% endblock %}
+    {% if create_url %}
+    <a href="{% url create_url %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Add {{ page_title|truncatewords:1 }}
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="table-card">
+  <div class="table-toolbar">
+    <button class="btn btn-warning btn-sm" onclick="bulkAction('{{ model_key }}', 'toggle')">
+      <i class="fa-solid fa-toggle-on"></i> Toggle Status
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="bulkAction('{{ model_key }}', 'delete')">
+      <i class="fa-solid fa-trash"></i> Delete Selected
+    </button>
+
+    {% block toolbar_extras %}{% endblock %}
+  </div>
+
+  {% if list %}
+  <table class="cms-table">
+    <thead>
+      <tr>
+        <th style="width:24px;"></th>
+        <th style="width:30px;"><input type="checkbox" id="select-all"></th>
+        {% block table_headers %}
+        <th>Title</th>
+        <th>Slug</th>
+        <th>Status</th>
+        <th>Updated</th>
+        <th>Actions</th>
+        {% endblock %}
+      </tr>
+    </thead>
+    <tbody data-sortable>
+      {% for obj in list %}
+      <tr data-id="{{ obj.pk }}">
+        <td class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></td>
+        <td><input type="checkbox" class="row-checkbox" value="{{ obj.pk }}"></td>
+
+        {% block table_row %}
+        <td>
+          <a href="{% block edit_url %}#{% endblock %}">{{ obj.title }}</a>
+        </td>
+        <td class="text-mono text-muted text-sm">{{ obj.slug }}</td>
+        <td>
+          <div class="toggle-wrap"
+               data-toggle-url="/core/toggle/{{ model_key }}/{{ obj.pk }}/"
+               title="Toggle status">
+            <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
+          </div>
+        </td>
+        <td class="text-muted text-sm">
+          {% if obj.updated_at %}{{ obj.updated_at|timesince }} ago{% endif %}
+        </td>
+        <td>
+          <div class="action-group">
+            <a href="{% block row_edit_url %}#{% endblock %}"
+               class="action-btn edit" title="Edit">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+            <button class="action-btn delete" title="Delete"
+                    onclick="openDeleteModal('/core/delete/{{ model_key }}/{{ obj.pk }}/', '{{ obj.title|escapejs }}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </td>
+        {% endblock %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% else %}
+  <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+    <i class="fa-solid fa-inbox" style="font-size:32px; margin-bottom:12px; display:block; opacity:.3;"></i>
+    No {{ page_title|lower }} yet.
+    {% if create_url %}
+    <div style="margin-top:10px;">
+      <a href="{% url create_url %}" class="btn btn-primary btn-sm">Create the first one</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initSortable('{{ model_key }}');
+  });
+</script>
+{% endblock %}

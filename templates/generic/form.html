@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% load cms_tags %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">{{ page_title }}</h1>
+  {% if list_url %}
+  <a href="{% url list_url %}" class="btn btn-secondary">
+    <i class="fa-solid fa-arrow-left"></i> Back to list
+  </a>
+  {% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data" id="cms-form">
+  {% csrf_token %}
+  {% if object %}<input type="hidden" id="object-id" value="{{ object.pk }}">{% endif %}
+  <input type="hidden" name="action" id="form-action" value="save">
+
+  {% block form_body %}
+  <div class="form-grid">
+
+    <!-- ===== Main content column ===== -->
+    <div>
+      {% block main_fields %}
+
+      {% if form.non_field_errors %}
+      <div class="message error" style="margin-bottom:16px;">
+        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="form-card">
+        <div class="form-card-header">
+          <i class="fa-solid fa-pen-to-square"></i> Content
+        </div>
+        <div class="form-card-body">
+
+          {% for field in form.visible_fields %}
+          {% if field.name not in 'meta_title,meta_description,meta_keywords,slug,image,banner_image,avatar'|split:',' %}
+          <div class="form-group">
+            <label class="form-label" for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if field.field.required %}<span class="required">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+            <div class="form-hint">{{ field.help_text }}</div>
+            {% endif %}
+            {% if field.errors %}
+            <div class="form-error">{{ field.errors.0 }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% endfor %}
+
+        </div>
+
+        <!-- Form action bar -->
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary"
+                  onclick="document.getElementById('form-action').value='save'">
+            <i class="fa-solid fa-floppy-disk"></i>
+            {% if is_edit %}Save Changes{% else %}Create{% endif %}
+          </button>
+          <button type="submit" class="btn btn-secondary"
+                  onclick="document.getElementById('form-action').value='save_and_quit'">
+            Save & Quit
+          </button>
+          {% if not is_edit %}
+          <button type="submit" class="btn btn-secondary"
+                  onclick="document.getElementById('form-action').value='save_and_new'">
+            Save & New
+          </button>
+          {% endif %}
+          {% if list_url %}
+          <a href="{% url list_url %}" class="btn btn-secondary" style="margin-left:auto;">Cancel</a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% endblock main_fields %}
+    </div>
+
+    <!-- ===== Sidebar column ===== -->
+    <div>
+      {% block sidebar_fields %}
+
+      <!-- Slug card -->
+      {% if form.slug %}
+      <div class="form-card" style="margin-bottom:16px;">
+        <div class="form-card-header"><i class="fa-solid fa-link"></i> URL Slug</div>
+        <div class="form-card-body">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="{{ form.slug.id_for_label }}">Slug</label>
+            {{ form.slug }}
+            <div id="slug-status" class="slug-status"></div>
+            {% if form.slug.errors %}<div class="form-error">{{ form.slug.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Media card -->
+      {% if 'image' in form.fields or 'banner_image' in form.fields or 'avatar' in form.fields %}
+      <div class="form-card" style="margin-bottom:16px;">
+        <div class="form-card-header"><i class="fa-solid fa-image"></i> Media</div>
+        <div class="form-card-body">
+          {% for fname in 'image,banner_image,avatar'|split:',' %}
+          {% with field=form|getitem:fname %}
+          {% if field %}
+          <div class="form-group">
+            <label class="form-label" for="{{ field.id_for_label }}" style="margin-bottom: 8px;">{{ field.label }}</label>
+            {{ field }}
+            <!-- Empty preview container for JS to hook into -->
+            <div id="{{ fname }}Preview"></div>
+            {% if field.errors %}<div class="form-error">{{ field.errors.0 }}</div>{% endif %}
+          </div>
+          {% endif %}
+          {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- SEO card -->
+      {% if form.meta_title %}
+      <div class="form-card" style="margin-bottom:16px;">
+        <div class="form-card-header" id="toggleMeta" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <span><i class="fa-solid fa-magnifying-glass"></i> SEO Meta</span>
+          <span id="metaStatusIcon">▼</span>
+        </div>
+        <div class="form-card-body" id="metaContent" style="display:none;">
+          {% for fname in 'meta_title,meta_description,meta_keywords'|split:',' %}
+          {% with field=form|getitem:fname %}
+          {% if field %}
+          <div class="form-group">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="form-error">{{ field.errors.0 }}</div>{% endif %}
+          </div>
+          {% endif %}
+          {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% block extra_sidebar %}{% endblock %}
+
+      {% endblock sidebar_fields %}
+    </div>
+
+  </div>
+  {% endblock form_body %}
+
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Apply form-control to all inputs/selects/textareas not already styled
+    document.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]), select, textarea')
+      .forEach(el => el.classList.add('form-control'));
+
+    // Slug input styling
+    const slugInput = document.getElementById('id_slug');
+    if (slugInput) slugInput.classList.add('slug-input');
+
+    // Slug field logic (User snippet)
+    (function initSlugGenerator() {
+        const titleInput = document.getElementById("id_title");
+        const slugInput = document.getElementById("id_slug");
+        const slugMessage = document.getElementById("slug-status");
+        const articleIdInput = document.getElementById("object-id");
+        
+        // Define model name safely
+        const modelName = '{{ model_key|default:"" }}';
+
+        if (!titleInput || !slugInput || !modelName) return;
+
+        const objectId = articleIdInput ? articleIdInput.value : "";
+        let debounceTimer;
+        let slugManuallyEdited = false;
+
+        function slugify(text) {
+            return text.toString().toLowerCase()
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/[^\w\-]+/g, '')
+                .replace(/\-\-+/g, '-')
+                .replace(/^-+/, '')
+                .replace(/-+$/, '')
+                .substring(0, 80);
+        }
+
+        function checkSlugAvailability(slug) {
+            if (!slug) {
+                if (slugMessage) {
+                    slugMessage.textContent = "";
+                    slugMessage.className = "slug-status";
+                }
+                return;
+            }
+
+            const params = new URLSearchParams({ slug });
+            if (objectId) params.append('exclude_id', objectId);
+
+            fetch(`/core/slug/${modelName}/?${params}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        if (slugMessage) {
+                            slugMessage.textContent = `⚠️ ${data.error}`;
+                            slugMessage.className = "slug-status error";
+                            slugMessage.style.color = "#f59e0b";
+                        }
+                        return;
+                    }
+
+                    if (slugMessage) {
+                        if (!data.available) {
+                            slugMessage.textContent = `❌ Slug already in use`;
+                            slugMessage.className = "slug-status taken";
+                            slugMessage.style.color = "#dc2626";
+                        } else {
+                            slugMessage.textContent = `✅ Slug available`;
+                            slugMessage.className = "slug-status available";
+                            slugMessage.style.color = "#16a34a";
+                        }
+                    }
+                })
+                .catch(err => console.error("Slug check failed:", err));
+        }
+
+        slugInput.addEventListener("input", function () {
+            const slug = slugInput.value.trim();
+
+            if (slug === "") {
+                slugManuallyEdited = false;
+                if (slugMessage) {
+                    slugMessage.textContent = ""; 
+                    slugMessage.className = "slug-status";
+                }
+            } else {
+                slugManuallyEdited = true;
+            }
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (!slug) return;
+                checkSlugAvailability(slug);
+            }, 400);
+        });
+
+        titleInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+
+            if (!slugManuallyEdited) {
+                slugInput.value = slugify(titleInput.value);
+            }
+
+            debounceTimer = setTimeout(() => {
+                const slug = slugInput.value.trim();
+
+                if (!slug) {
+                    if (slugMessage) {
+                        slugMessage.textContent = "";
+                        slugMessage.className = "slug-status";
+                    }
+                    return;
+                }
+
+                checkSlugAvailability(slug);
+            }, 400);
+        });
+
+        slugInput.addEventListener("blur", function () {
+            const slug = slugInput.value.trim();
+            if (slug) {
+                checkSlugAvailability(slug);
+            }
+        });
+    })();
+  });
+</script>
+{% endblock %}

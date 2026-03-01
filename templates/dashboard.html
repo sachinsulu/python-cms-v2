@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Dashboard</h1>
+  <span class="text-muted text-sm">Welcome back, {{ request.user.username }}</span>
+</div>
+
+<!-- Stat Tiles -->
+{% if stats %}
+<div class="tiles">
+  {% for stat in stats %}
+  <a href="{% if stat.list_url %}{% url stat.list_url %}{% else %}#{% endif %}" class="tile {{ stat.color }}">
+    <div class="tile-icon"><i class="{{ stat.icon }}"></i></div>
+    <div>
+      <div class="tile-count">{{ stat.count }}</div>
+      <div class="tile-label">{{ stat.label }}</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Recent Activity Grid -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px,1fr)); gap:20px;">
+
+  {% if recent_articles %}
+  <div class="card">
+    <div class="card-header">
+      <span style="font-weight:600; font-size:13.5px;"><i class="fa-solid fa-newspaper" style="color:var(--blue); margin-right:6px;"></i>Recent Articles</span>
+      <a href="{% url 'article_list' %}" class="btn btn-secondary btn-sm">View all</a>
+    </div>
+    <div style="overflow:hidden;">
+      <table class="cms-table">
+        <thead><tr><th>Title</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          {% for a in recent_articles %}
+          <tr>
+            <td><a href="{% url 'article_edit' a.slug %}">{{ a.title|truncatechars:40 }}</a></td>
+            <td>
+              {% if a.is_active %}<span class="badge badge-green">Active</span>
+              {% else %}<span class="badge badge-gray">Inactive</span>{% endif %}
+            </td>
+            <td class="text-muted text-sm">{{ a.updated_at|timesince }} ago</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if recent_blogs %}
+  <div class="card">
+    <div class="card-header">
+      <span style="font-weight:600; font-size:13.5px;"><i class="fa-solid fa-blog" style="color:var(--orange); margin-right:6px;"></i>Recent Blog Posts</span>
+      <a href="{% url 'blog_list' %}" class="btn btn-secondary btn-sm">View all</a>
+    </div>
+    <div style="overflow:hidden;">
+      <table class="cms-table">
+        <thead><tr><th>Title</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          {% for b in recent_blogs %}
+          <tr>
+            <td><a href="{% url 'blog_edit' b.slug %}">{{ b.title|truncatechars:40 }}</a></td>
+            <td>
+              {% if b.is_active %}<span class="badge badge-green">Active</span>
+              {% else %}<span class="badge badge-gray">Inactive</span>{% endif %}
+            </td>
+            <td class="text-muted text-sm">{{ b.updated_at|timesince }} ago</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if recent_testimonials %}
+  <div class="card">
+    <div class="card-header">
+      <span style="font-weight:600; font-size:13.5px;"><i class="fa-solid fa-star" style="color:var(--yellow); margin-right:6px;"></i>Recent Testimonials</span>
+      <a href="{% url 'testimonial_list' %}" class="btn btn-secondary btn-sm">View all</a>
+    </div>
+    <div style="overflow:hidden;">
+      <table class="cms-table">
+        <thead><tr><th>Name</th><th>Rating</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for t in recent_testimonials %}
+          <tr>
+            <td>
+              <a href="{% url 'testimonial_edit' t.slug %}">{{ t.name }}</a>
+              <div class="text-muted text-sm">{{ t.title|truncatechars:30 }}</div>
+            </td>
+            <td>
+              {% for i in "12345" %}{% if forloop.counter <= t.rating %}⭐{% endif %}{% endfor %}
+            </td>
+            <td>
+              {% if t.is_active %}<span class="badge badge-green">Active</span>
+              {% else %}<span class="badge badge-gray">Inactive</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

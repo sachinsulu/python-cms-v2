@@ -1,0 +1,27 @@
+from django import forms
+from .models import Package, SubPackage
+
+
+class PackageForm(forms.ModelForm):
+    slug = forms.SlugField(required=False)
+
+    class Meta:
+        model  = Package
+        fields = ['title', 'slug', 'description', 'image', 'package_type',
+                  'meta_title', 'meta_description', 'meta_keywords']
+        widgets = {'description': forms.Textarea(attrs={'rows': 5})}
+
+
+class SubPackageForm(forms.ModelForm):
+    slug         = forms.SlugField(required=False)
+    remove_image = forms.CharField(widget=forms.HiddenInput(), required=False, initial='0')
+
+    class Meta:
+        model  = SubPackage
+        fields = ['title', 'slug', 'description', 'image', 'price',
+                  'capacity', 'beds', 'amenities',
+                  'meta_title', 'meta_description', 'meta_keywords']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'amenities':   forms.Textarea(attrs={'rows': 3, 'placeholder': 'WiFi, Pool, Breakfast'}),
+        }

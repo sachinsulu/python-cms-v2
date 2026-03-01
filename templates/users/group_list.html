@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Groups{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Groups</h1>
+  <a href="{% url 'group_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Group</a>
+</div>
+<div class="table-card">
+  <table class="cms-table">
+    <thead><tr><th>Name</th><th>Permissions</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for g in groups %}
+      <tr>
+        <td><strong>{{ g.name }}</strong></td>
+        <td class="text-muted text-sm">{{ g.permissions.count }} permission{{ g.permissions.count|pluralize }}</td>
+        <td>
+          <div class="action-group">
+            <a href="{% url 'group_edit' g.pk %}" class="action-btn edit"><i class="fa-solid fa-pen"></i></a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" style="text-align:center; padding:30px; color:var(--text-muted);">No groups yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CMS{% endblock %} — Python CMS</title>
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body data-csrf="{{ csrf_token }}">
+
+<div class="cms-shell" id="cms-shell">
+
+  <!-- ==================== TOPBAR ==================== -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button id="sidebar-toggle" title="Toggle sidebar">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <span class="logo">Python <span>CMS</span></span>
+    </div>
+
+    <div class="topbar-right">
+      <div class="topbar-user">
+        <div class="avatar">{{ request.user.username|first|upper }}</div>
+        <span style="font-size:13px; color:var(--text-secondary);">{{ request.user.username }}</span>
+      </div>
+      <form id="logout-form" action="{% url 'logout' %}" method="post" style="display:none;">
+        {% csrf_token %}
+      </form>
+      <button class="logout-btn" onclick="document.getElementById('logout-form').submit()">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Main</div>
+
+      <a href="{% url 'dashboard' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-gauge"></i> Dashboard
+      </a>
+
+      {% if request.user.is_superuser or perms.articles.view_article %}
+      <a href="{% url 'article_list' %}"
+         class="sidebar-link {% if 'article' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-newspaper"></i> Articles
+      </a>
+      {% endif %}
+
+      {% if request.user.is_superuser or perms.blog.view_blog %}
+      <a href="{% url 'blog_list' %}"
+         class="sidebar-link {% if 'blog' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-blog"></i> Blog
+      </a>
+      {% endif %}
+
+      {% if request.user.is_superuser or perms.packages.view_package %}
+      <a href="{% url 'package_list' %}"
+         class="sidebar-link {% if 'package' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-box"></i> Packages
+      </a>
+      {% endif %}
+
+      {% if request.user.is_superuser or perms.testimonials.view_testimonial %}
+      <a href="{% url 'testimonial_list' %}"
+         class="sidebar-link {% if 'testimonial' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-star"></i> Testimonials
+      </a>
+      {% endif %}
+
+      {% if request.user.is_superuser or perms.social.view_social %}
+      <a href="{% url 'social_list' %}"
+         class="sidebar-link {% if 'social' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-share-nodes"></i> Social / OTA
+      </a>
+      {% endif %}
+    </div>
+
+    {% if request.user.is_superuser %}
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Admin</div>
+
+      <a href="{% url 'user_list' %}"
+         class="sidebar-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-users"></i> Users
+      </a>
+
+      <a href="{% url 'group_list' %}"
+         class="sidebar-link {% if 'group' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-users-gear"></i> Groups
+      </a>
+
+      <a href="{% url 'audit_log' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-clock-rotate-left"></i> Audit Log
+      </a>
+    </div>
+    {% endif %}
+
+  </aside>
+
+  <!-- ==================== MAIN ==================== -->
+  <main class="main">
+
+    <!-- Django messages -->
+    {% if messages %}
+    <div class="messages-wrap">
+      {% for message in messages %}
+      <div class="message {{ message.tags }}">
+        {% if message.tags == 'success' %}<i class="fa-solid fa-circle-check"></i>
+        {% elif message.tags == 'error' %}<i class="fa-solid fa-circle-xmark"></i>
+        {% elif message.tags == 'warning' %}<i class="fa-solid fa-triangle-exclamation"></i>
+        {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+</div>
+
+<!-- ==================== DELETE MODAL ==================== -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal-box">
+    <h3 class="modal-title"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red);"></i> Confirm Delete</h3>
+    <p class="modal-body" id="delete-modal-text">Are you sure? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <form id="delete-form" method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+          <i class="fa-solid fa-trash"></i> Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

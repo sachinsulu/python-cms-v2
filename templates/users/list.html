@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Users <span class="page-title-sub">{{ users|length }} total</span></h1>
+  <a href="{% url 'user_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add User</a>
+</div>
+
+<div class="table-card">
+  {% if users %}
+  <table class="cms-table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Groups</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>
+          <div class="flex items-center gap-2">
+            <div class="avatar" style="width:28px;height:28px;font-size:11px;">{{ u.username|first|upper }}</div>
+            {{ u.username }}
+            {% if u.is_superuser %}<span class="badge badge-blue">Admin</span>{% endif %}
+          </div>
+        </td>
+        <td class="text-muted text-sm">{{ u.email|default:"—" }}</td>
+        <td class="text-muted text-sm">
+          {% for g in u.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+          {% if not u.groups.all %}—{% endif %}
+        </td>
+        <td>
+          {% if u.is_active %}<span class="badge badge-green">Active</span>
+          {% else %}<span class="badge badge-gray">Inactive</span>{% endif %}
+        </td>
+        <td>
+          <div class="action-group">
+            <a href="{% url 'user_edit' u.pk %}" class="action-btn edit"><i class="fa-solid fa-pen"></i></a>
+            {% if not u.is_superuser and u != request.user %}
+            <button class="action-btn delete"
+                    onclick="openDeleteModal('{% url 'user_delete' u.pk %}', '{{ u.username|escapejs }}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center; padding:40px; color:var(--text-muted);">No users found.</div>
+  {% endif %}
+</div>
+{% endblock %}
