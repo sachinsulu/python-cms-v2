@@ -1,6 +1,7 @@
 from .base import *
 
 DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-only-change-in-production')
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 DATABASES = {

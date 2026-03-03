@@ -10,7 +10,6 @@ from rest_framework.routers import DefaultRouter
 def build_router():
     """Build lazily — registry is populated after AppConfig.ready() fires."""
     from apps.core.registry import cms_registry
-    from apps.packages.api import SubPackageViewSet  # registered separately
 
     router = DefaultRouter()
 

@@ -3,12 +3,19 @@ from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django.db.models import FileField
 
+def get_media_asset_model():
+    from apps.media.models import MediaAsset
+    return MediaAsset
+
 @receiver(post_delete)
 def auto_delete_file_on_delete(sender, instance, **kwargs):
     """
     Deletes file from filesystem
     when corresponding object is deleted.
     """
+    if sender is not get_media_asset_model():
+        return
+
     # Skip models that don't have fields (prevent issues with some internal/unmanaged models)
     if not hasattr(instance, '_meta'):
         return
@@ -29,6 +36,9 @@ def auto_delete_file_on_change(sender, instance, **kwargs):
     when corresponding object is updated
     with new file, or file is cleared.
     """
+    if sender is not get_media_asset_model():
+        return
+
     if not hasattr(instance, '_meta') or not instance.pk:
         return
 

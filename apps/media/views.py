@@ -1,5 +1,6 @@
-import json
 import logging
+
+from django.conf import settings
 
 from django.views import View
 from django.http import JsonResponse
@@ -27,6 +28,16 @@ class MediaUploadView(View):
         uploaded = request.FILES.get('file')
         if not uploaded:
             return JsonResponse({'error': 'No file provided'}, status=400)
+
+        max_size = getattr(settings, 'IMAGE_MAX_FILE_SIZE', 2 * 1024 * 1024)
+        allowed_exts = getattr(settings, 'IMAGE_ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp'])
+
+        if uploaded.size > max_size:
+            return JsonResponse({'error': f'File too large. Max size is {max_size // (1024*1024)}MB.'}, status=400)
+
+        ext = uploaded.name.rsplit('.', 1)[-1].lower() if '.' in uploaded.name else ''
+        if ext not in allowed_exts:
+            return JsonResponse({'error': f'File type not allowed. Allowed: {", ".join(allowed_exts)}'}, status=400)
 
         alt_text = request.POST.get('alt_text', '').strip()
 

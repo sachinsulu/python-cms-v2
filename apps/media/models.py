@@ -63,7 +63,7 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
         verbose_name_plural = 'Media Assets'
 
     def __str__(self):
-        return self.alt_text or os.path.basename(self.file.name)
+        return self.alt_text or (os.path.basename(self.file.name) if self.file else 'Untitled Asset')
 
     # ------------------------------------------------------------------ #
     # Auto-detect + thumbnail generation
@@ -72,7 +72,8 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
     def save(self, *args, **kwargs):
         # Auto-detect file type from extension
         if self.file:
-            ext = self.file.name.rsplit('.', 1)[-1].lower()
+            name = self.file.name
+            ext = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
             self.file_type = self.EXTENSION_MAP.get(ext, self.FILE)
 
         super().save(*args, **kwargs)

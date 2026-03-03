@@ -196,6 +196,21 @@ class ContentUpdateView(CMSPermissionMixin, View):
             }
             updated = form.save(commit=False)
             self.before_save(request, updated)
+
+            try:
+                updated.full_clean()
+            except ValidationError as e:
+                form.add_error(None, e)
+                return render(request, self.template, {
+                    'form':       form,
+                    'object':     obj,
+                    'page_title': self.page_title or f'Edit {self.model.__name__}',
+                    'list_url':   self.list_url,
+                    'is_edit':    True,
+                    'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
+                    **self.get_extra_context(),
+                })
+
             updated.save()
             invalidate_dashboard_cache()
             new_values = {

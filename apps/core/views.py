@@ -13,7 +13,7 @@ from django.views import View
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.db import transaction
 from django.db.models import Case, When, Value, BooleanField
 from django.utils.decorators import method_decorator
@@ -37,6 +37,10 @@ def redirect_back(request, default='/'):
     parsed  = urlparse(referer)
     if parsed.netloc and parsed.netloc != request.get_host():
         return redirect(default)
+    # Block protocol-relative URLs like //evil.com
+    path = parsed.path or '/'
+    if referer.startswith('//') or not referer.startswith('/'):
+        return redirect(default)
     return redirect(referer)
 
 
@@ -58,18 +62,25 @@ class DashboardView(View):
     def get(self, request):
         user    = request.user
         version = cache.get('dashboard_stats_version', 1)
-        cache_key = f'dashboard_stats_{user.pk}_v{version}'
-        stats   = cache.get(cache_key)
+
+        stats_key   = f'dashboard_stats_{user.pk}_v{version}'
+        recent_key  = f'dashboard_recent_{user.pk}_v{version}'
+
+        stats   = cache.get(stats_key)
+        recent  = cache.get(recent_key)
 
         if not stats:
             stats = cms_registry.get_dashboard_stats(user)
-            cache.set(cache_key, stats, timeout=60)
+            cache.set(stats_key, stats, timeout=60)
 
-        ctx = {
+        if not recent:
+            recent = cms_registry.get_recent_items(user)
+            cache.set(recent_key, recent, timeout=60)
+
+        return render(request, 'dashboard.html', {
             'stats':          stats,
-            'recent_modules': cms_registry.get_recent_items(user),
-        }
-        return render(request, 'dashboard.html', ctx)
+            'recent_modules': recent,
+        })
 
 
 # ------------------------------------------------------------------ #
@@ -222,6 +233,7 @@ def update_order(request, model_key):
 
 
 @login_required
+@require_GET
 def ajax_check_slug(request, model_key):
     slug       = request.GET.get('slug', '').strip()
     exclude_id = request.GET.get('exclude_id')
