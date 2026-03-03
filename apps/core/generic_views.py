@@ -15,6 +15,7 @@ from .mixins import CMSPermissionMixin
 from .audit import log_action
 from .cache import invalidate_dashboard_cache
 from django.core.exceptions import ValidationError
+from .models import AuditLog
 
 
 class ContentListView(CMSPermissionMixin, View):
