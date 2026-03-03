@@ -7,9 +7,10 @@ A production-grade Django CMS rebuilt from scratch with proper architecture.
 - **`BaseContentModel`** — single abstract base for all content types (slug, is_active, position, timestamps, SEO meta)
 - **Registry pattern** — apps self-register via `AppConfig.ready()`. Adding a new content type requires zero changes to shared code.
 - **Generic CRUD views** — `ContentListView`, `ContentCreateView`, `ContentUpdateView`. Each app subclasses these with a few class attributes.
-- **Auto-wired REST API** — a single `api/router.py` builds all endpoints from the registry automatically
-- **Audit logging** — every create/update/delete/toggle/bulk action is logged to `AuditLog`
-- **Single template per operation** — `generic/list.html` and `generic/form.html` serve all content types
+- **Auto-wired REST API** — a single `api/router.py` builds all endpoints from the registry automatically.
+- **Audit logging** — every create/update/delete/toggle/bulk action is logged to `AuditLog`.
+- **Single template per operation** — `generic/list.html` and `generic/form.html` serve all content types.
+- **Centralized Media Library** — `apps/media` provides a global media picker and automatic WebP thumbnail generation.
 
 ## Setup
 
@@ -65,6 +66,7 @@ All endpoints are read-only and versioned under `/api/v1/`.
 | `GET /api/v1/blogs/` | List active blog posts |
 | `GET /api/v1/packages/` | List packages with nested sub-packages |
 | `GET /api/v1/testimonials/` | List testimonials |
+| `GET /api/v1/nearbys/` | List nearby locations |
 | `GET /api/v1/socials/?type=social` | Social links |
 | `GET /api/v1/socials/?type=ota` | OTA/booking links |
 
@@ -91,11 +93,13 @@ python-cms-v2/
 ├── apps/
 │   ├── core/         # Registry, BaseContentModel, AuditLog, generic views
 │   ├── accounts/     # Custom User model, auth, user/group management
+│   ├── media/        # Centralized Media Library (assets, thumbnails)
 │   ├── articles/     # Article content type
 │   ├── blog/         # Blog post content type
 │   ├── packages/     # Package + SubPackage content types
 │   ├── testimonials/ # Testimonial content type
-│   └── social/       # Social / OTA links
+│   ├── social/       # Social / OTA links
+│   └── nearby/       # Nearby locations content type
 ├── api/              # REST API router (auto-wired from registry)
 ├── templates/
 │   ├── generic/      # list.html + form.html (shared by all content types)
