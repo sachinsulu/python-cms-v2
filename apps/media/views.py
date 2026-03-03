@@ -6,6 +6,9 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.shortcuts import render
+
+from apps.core.mixins import CMSPermissionMixin
 
 from .models import MediaAsset
 
@@ -62,3 +65,15 @@ class MediaLibraryView(View):
         }, request=request)
 
         return JsonResponse({'html': html})
+
+
+class MediaAdminListView(CMSPermissionMixin, View):
+    """Full-page admin list view for the media library."""
+    permission_required = 'media.view_mediaasset'
+
+    def get(self, request):
+        assets = MediaAsset.objects.select_related('uploaded_by').order_by('-created_at')
+        return render(request, 'media/admin_list.html', {
+            'assets':    assets,
+            'model_key': 'media',
+        })

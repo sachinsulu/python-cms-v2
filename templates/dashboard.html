@@ -40,12 +40,12 @@
         <tbody>
           {% for item in module.items %}
           <tr>
-            <td>{{ item.title|truncatechars:40 }}</td>
+            <td>{{ item|truncatechars:40 }}</td>
             <td>
               {% if item.is_active %}<span class="badge badge-green">Active</span>
               {% else %}<span class="badge badge-gray">Inactive</span>{% endif %}
             </td>
-            <td class="text-muted text-sm">{{ item.updated_at|timesince }} ago</td>
+            <td class="text-muted text-sm">{% if item.updated_at %}{{ item.updated_at|timesince }} ago{% else %}{{ item.created_at|timesince }} ago{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
