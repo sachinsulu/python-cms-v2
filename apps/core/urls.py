@@ -2,7 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('audit/', views.AuditLogView.as_view(), name='audit_log'),
+    path('audit/',       views.AuditLogView.as_view(), name='audit_log'),
+    path('audit/clear/', views.clear_audit_log,        name='clear_audit_log'),
 
     # Generic action endpoints
     path('toggle/<str:model_key>/<int:pk>/',  views.toggle_status, name='toggle_status'),
