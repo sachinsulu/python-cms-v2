@@ -11,46 +11,36 @@
   {% endif %}
 </div>
 
-<div class="table-card">
-  <table class="cms-table">
-    <thead>
-      <tr>
-        <th>Action</th>
-        <th>Target</th>
-        <th>User</th>
-        <th>Time</th>
-        <th>IP</th>
-        <th>Changes</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for log in logs %}
-      <tr>
-        <td><span class="audit-action-badge {{ log.action }}">{{ log.action }}</span></td>
-        <td>
-          <div style="font-size:13.5px; font-weight:500;">
-            {{ log.model_name }} #{{ log.object_id }}
-            <div class="text-muted" style="font-weight:400; font-size:12px;">{{ log.object_repr }}</div>
-          </div>
-        </td>
-        <td><strong>{{ log.user|default:"system" }}</strong></td>
-        <td class="text-muted text-sm">{{ log.timestamp|timesince }} ago</td>
-        <td class="text-muted text-sm">{{ log.ip_address|default:"—" }}</td>
-        <td>
-          {% if log.changes %}
-          <details style="margin-top:2px;">
-            <summary class="text-xs text-muted" style="cursor:pointer;">View</summary>
-            <pre style="margin-top:6px; font-size:10px; background:#f8fafc; padding:10px; border-radius:6px; overflow-x:auto; max-width:300px;">{{ log.changes|pprint }}</pre>
-          </details>
-          {% else %}
-          —
-          {% endif %}
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6" style="text-align:center; padding:40px;">No entries yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="card">
+  <div class="card-body" style="padding:0;">
+    {% for log in logs %}
+    <div class="audit-entry" style="padding:14px 20px;">
+      <div>
+        <span class="audit-action-badge {{ log.action }}">{{ log.action }}</span>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:13.5px; font-weight:500;">
+          {{ log.model_name }} #{{ log.object_id }}
+          <span class="text-muted" style="font-weight:400;">— {{ log.object_repr }}</span>
+        </div>
+        <div class="text-muted text-sm" style="margin-top:3px;">
+          by <strong>{{ log.user|default:"system" }}</strong>
+          · {{ log.timestamp|timesince }} ago
+          {% if log.ip_address %}· {{ log.ip_address }}{% endif %}
+        </div>
+        {% if log.changes %}
+        <details style="margin-top:6px;">
+          <summary class="text-sm text-muted" style="cursor:pointer;">Show changes</summary>
+          <pre style="margin-top:6px; font-size:11px; background:#f8fafc; padding:10px; border-radius:6px; overflow-x:auto;">{{ log.changes|pprint }}</pre>
+        </details>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+      No audit entries yet.
+    </div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}
