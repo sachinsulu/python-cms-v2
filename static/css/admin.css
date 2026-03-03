@@ -928,3 +928,89 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 .gap-2 { gap: 8px; }
 .gap-3 { gap: 12px; }
 .w-full { width: 100%; }
+
+/* ============================================================
+   DataTables Premium Styling
+   ============================================================ */
+
+.dt-container {
+  padding: 10px 0;
+  font-family: inherit;
+}
+
+.dt-search {
+  margin-bottom: 15px;
+}
+
+.dt-search input {
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--border) !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  background: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  outline: none;
+  min-width: 240px;
+}
+
+.dt-search input:focus {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, .12) !important;
+}
+
+.dt-paging {
+  margin-top: 20px !important;
+  display: flex !important;
+  gap: 4px !important;
+  justify-content: flex-end !important;
+}
+
+.dt-paging-button {
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--border) !important;
+  padding: 5px 12px !important;
+  font-size: 12.5px !important;
+  cursor: pointer !important;
+  background: var(--card-bg) !important;
+  color: var(--text-secondary) !important;
+  transition: all .15s !important;
+  margin: 0 !important;
+}
+
+.dt-paging-button.current {
+  background: var(--brand) !important;
+  color: #fff !important;
+  border-color: var(--brand) !important;
+  font-weight: 600 !important;
+}
+
+.dt-paging-button:hover:not(.current) {
+  background: var(--content-bg) !important;
+  border-color: var(--text-muted) !important;
+}
+
+.dt-info {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  margin-top: 20px !important;
+}
+
+.dt-length {
+  margin-top: 20px !important;
+}
+
+.dt-length select {
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--border) !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  background: var(--card-bg) !important;
+}
+
+/* Fix for standard DataTables alignment */
+table.dataTable thead th {
+  border-bottom: 1px solid var(--border) !important;
+}
+table.dataTable.no-footer {
+  border-bottom: 1px solid var(--border) !important;
+}

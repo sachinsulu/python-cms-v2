@@ -120,6 +120,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initToggles() {
   document.querySelectorAll('[data-toggle-url]').forEach(wrap => {
+    // Prevent double binding
+    if (wrap.dataset.toggled) return;
+    wrap.dataset.toggled = '1';
+
     wrap.addEventListener('click', async () => {
       const url = wrap.dataset.toggleUrl;
       const sw = wrap.querySelector('.toggle-switch');
@@ -205,6 +209,8 @@ function initBulk() {
   const checkboxes = () => document.querySelectorAll('.row-checkbox');
 
   selectAll.addEventListener('change', () => {
+    // If DataTable is present, we might want to select ALL rows across pages
+    // For now, let's at least ensure visible ones work.
     checkboxes().forEach(cb => { cb.checked = selectAll.checked; });
   });
 
@@ -214,7 +220,7 @@ function initBulk() {
       const all = checkboxes();
       const checked = document.querySelectorAll('.row-checkbox:checked');
       selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
-      selectAll.checked = checked.length === all.length;
+      selectAll.checked = all.length > 0 && checked.length === all.length;
     }
   });
 }
@@ -260,6 +266,65 @@ async function executeBulkAction(modelKey, action, checked) {
 // Drag-and-drop sorting (SortableJS)
 // ------------------------------------------------------------------ //
 
+// ------------------------------------------------------------------ //
+// Global DataTables Initialization
+// ------------------------------------------------------------------ //
+
+function initAllDataTables() {
+  console.log('CMS: Initializing DataTables...');
+  if (typeof DataTable === 'undefined') {
+    console.warn('CMS: DataTable library not found. Check base.html scripts.');
+    return;
+  }
+
+  const tables = document.querySelectorAll('.cms-table');
+  console.log(`CMS: Found ${tables.length} tables to process.`);
+
+  tables.forEach(tableEl => {
+    if (DataTable.isDataTable(tableEl) || tableEl.classList.contains('no-datatable')) {
+      console.log('CMS: Skipping table (already init or no-datatable)');
+      return;
+    }
+
+    const isSortable = tableEl.querySelector('tbody[data-sortable]');
+
+    try {
+      new DataTable(tableEl, {
+        pageLength: 20,
+        lengthMenu: [10, 20, 50, 100],
+        order: [],
+        columnDefs: [
+          { targets: 'no-sort', orderable: false },
+          { targets: [0, 1, -1], orderable: !isSortable }
+        ],
+        language: {
+          search: "",
+          searchPlaceholder: "Search...",
+        },
+        layout: {
+          topStart: 'search',
+          topEnd: 'paging',
+          bottomStart: 'info',
+          bottomEnd: 'lengthMenu'
+        },
+        drawCallback: function () {
+          initToggles();
+        }
+      });
+      console.log('CMS: DataTable initialized successfully on', tableEl);
+    } catch (e) {
+      console.error('CMS: Error initializing DataTable:', e);
+    }
+  });
+
+  // Re-style search inputs
+  document.querySelectorAll('.dt-search input').forEach(input => {
+    if (!input.classList.contains('form-control')) {
+      input.classList.add('form-control');
+    }
+  });
+}
+
 function initSortable(modelKey) {
   const tbody = document.querySelector('tbody[data-sortable]');
   if (!tbody || typeof Sortable === 'undefined') return;
@@ -268,11 +333,14 @@ function initSortable(modelKey) {
     handle: '.drag-handle',
     animation: 150,
     ghostClass: 'sortable-ghost',
-    onEnd: async () => {
+    onEnd: async (evt) => {
       const order = [...tbody.querySelectorAll('tr[data-id]')].map(r => r.dataset.id);
+
       try {
         const res = await postJson(`/core/sort/${modelKey}/`, { order });
-        if (res.success) toast.show('Order saved');
+        if (res.success) {
+          toast.show('Order saved');
+        }
       } catch (e) {
         toast.show('Failed to save order');
       }
@@ -472,6 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initBulk();
   initImagePreview();
   initSEOToggle();
+  initAllDataTables();
 
   // Character Counters
   Object.keys(CONFIG.limits).forEach(fieldId => {
