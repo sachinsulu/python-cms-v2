@@ -1,8 +1,13 @@
 from rest_framework import serializers, viewsets, filters
 from .models import Blog
+from apps.media.api import MediaAssetSerializer
+
 
 
 class BlogSerializer(serializers.ModelSerializer):
+    image = MediaAssetSerializer(read_only=True)
+    banner_image = MediaAssetSerializer(read_only=True)
+
     class Meta:
         model  = Blog
         fields = ['slug', 'title', 'subtitle', 'content', 'image',

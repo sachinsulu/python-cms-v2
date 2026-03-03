@@ -1,8 +1,12 @@
 from rest_framework import serializers, viewsets, filters
 from .models import Article
+from apps.media.api import MediaAssetSerializer
+
 
 
 class ArticleSerializer(serializers.ModelSerializer):
+    image = MediaAssetSerializer(read_only=True)
+
     class Meta:
         model  = Article
         fields = [

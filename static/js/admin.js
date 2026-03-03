@@ -291,6 +291,9 @@ function initImagePreview() {
     const imageInput = document.querySelector(`input[type="file"][name="${fieldName}"]`);
     if (!imageInput) return;
 
+    // Skip fields managed by MediaPickerWidget (handled by media-picker.js)
+    if (imageInput.closest('.media-picker')) return;
+
     let previewId = fieldName + 'Preview';
     let imagePreview = document.getElementById(previewId);
 

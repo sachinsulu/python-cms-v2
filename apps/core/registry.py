@@ -23,16 +23,23 @@ class CMSModelConfig:
         stat_perm=None,
         list_url=None,
         api_viewset=None,
+        # Dashboard recent-items controls
+        show_recent=True,
+        recent_limit=5,
+        recent_ordering='-updated_at',
     ):
-        self.model         = model
-        self.active_field  = active_field
-        self.supports_sort = supports_sort
-        self.supports_bulk = supports_bulk
-        self.stat_icon     = stat_icon
-        self.stat_color    = stat_color
-        self.stat_perm     = stat_perm
-        self.list_url      = list_url
-        self.api_viewset   = api_viewset
+        self.model           = model
+        self.active_field    = active_field
+        self.supports_sort   = supports_sort
+        self.supports_bulk   = supports_bulk
+        self.stat_icon       = stat_icon
+        self.stat_color      = stat_color
+        self.stat_perm       = stat_perm
+        self.list_url        = list_url
+        self.api_viewset     = api_viewset
+        self.show_recent     = show_recent
+        self.recent_limit    = recent_limit
+        self.recent_ordering = recent_ordering
 
 
 class CMSRegistry:
@@ -100,6 +107,42 @@ class CMSRegistry:
                 'list_url': config.list_url,
             })
         return stats
+
+    # ------------------------------------------------------------------ #
+    # Dashboard recent items
+    # ------------------------------------------------------------------ #
+
+    def get_recent_items(self, user) -> dict:
+        """
+        Returns recent items per registered model,
+        permission-aware and fully dynamic.
+        """
+        recent = {}
+
+        for key, config in self._registry.items():
+            if not config.show_recent:
+                continue
+
+            # Permission check
+            if config.stat_perm:
+                if not user.is_superuser and not user.has_perm(config.stat_perm):
+                    continue
+
+            try:
+                qs = config.model.objects.order_by(config.recent_ordering)[:config.recent_limit]
+                if qs.exists():
+                    recent[key] = {
+                        'label':    key.replace('_', ' ').title(),
+                        'icon':     config.stat_icon,
+                        'color':    config.stat_color,
+                        'items':    qs,
+                        'list_url': config.list_url,
+                    }
+            except Exception:
+                # Fail-safe: don't break dashboard if one model errors
+                continue
+
+        return recent
 
     # ------------------------------------------------------------------ #
     # Generic action helpers (used by toggle/bulk/reorder views)

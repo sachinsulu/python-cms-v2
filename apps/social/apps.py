@@ -18,4 +18,5 @@ class SocialConfig(AppConfig):
             stat_perm   = 'social.view_social',
             list_url    = 'social_list',
             api_viewset = SocialViewSet,
+            show_recent = False,
         ))

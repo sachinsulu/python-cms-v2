@@ -6,7 +6,10 @@ from apps.core.models import BaseContentModel
 class Article(BaseContentModel):
     subtitle  = models.CharField(max_length=255, blank=True)
     content   = models.TextField(blank=False)
-    image     = models.ImageField(upload_to='articles/', blank=True, null=True)
+    image     = models.ForeignKey(
+                    'media.MediaAsset', on_delete=models.SET_NULL,
+                    null=True, blank=True, related_name='articles',
+                )
     homepage  = models.BooleanField(default=False, db_index=True,
                     help_text='Show on homepage instead of inner pages')
     author    = models.ForeignKey(

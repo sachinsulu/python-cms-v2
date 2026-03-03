@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}CMS{% endblock %} — Python CMS</title>
   <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'css/media-picker.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   {% block extra_head %}{% endblock %}
 </head>
@@ -160,6 +161,7 @@
 </div>
 
 <script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/media-picker.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 {% block extra_js %}{% endblock %}
 </body>

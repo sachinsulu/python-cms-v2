@@ -1,0 +1,25 @@
+{% if assets %}
+<div class="media-library-grid">
+    {% for asset in assets %}
+    <div class="media-library-item{% if not asset.is_image %} media-library-file{% endif %}"
+         data-asset-id="{{ asset.pk }}"
+         data-asset-url="{{ asset.url }}"
+         data-asset-thumb="{{ asset.thumbnail_url }}"
+         data-asset-alt="{{ asset.alt_text }}"
+         data-asset-name="{{ asset }}">
+        {% if asset.is_image %}
+        <img src="{{ asset.thumbnail_url }}" alt="{{ asset.alt_text }}" loading="lazy">
+        {% else %}
+        <div class="media-library-file-icon">
+            <i class="fa-solid fa-file"></i>
+        </div>
+        {% endif %}
+        <span class="media-library-item-name">{{ asset }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted" style="text-align:center; padding:40px 20px;">
+    No media assets yet. Upload your first image above.
+</p>
+{% endif %}

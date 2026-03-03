@@ -14,8 +14,8 @@ env/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-media/
-staticfiles/
+/media/
+/staticfiles/
 
 # Environment
 .env
@@ -31,3 +31,6 @@ staticfiles/
 
 migrations/
 .env.example
+
+claude_project_context.txt
+update_claude.py

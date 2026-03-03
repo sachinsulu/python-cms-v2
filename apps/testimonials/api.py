@@ -1,14 +1,16 @@
 from rest_framework import serializers, viewsets
 from .models import Testimonial
+from apps.media.api import MediaAssetSerializer
+
 
 
 class TestimonialSerializer(serializers.ModelSerializer):
-    via_type_display = serializers.CharField(source='get_via_type_display', read_only=True)
+    image = MediaAssetSerializer(read_only=True)
 
     class Meta:
         model  = Testimonial
         fields = ['id', 'title', 'name', 'content', 'rating', 'image',
-                  'country', 'linksrc', 'via_type', 'via_type_display', 'position']
+                  'country', 'linksrc', 'via_type', 'position']
 
 
 class TestimonialViewSet(viewsets.ReadOnlyModelViewSet):

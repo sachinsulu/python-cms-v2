@@ -8,7 +8,10 @@ class Social(BaseContentModel):
     TYPE_CHOICES = [(TYPE_SOCIAL, 'Social Media'), (TYPE_OTA, 'OTA / Booking')]
 
     link  = models.CharField(max_length=500)
-    image = models.ImageField(upload_to='social/', blank=True, null=True)
+    image = models.ForeignKey(
+                'media.MediaAsset', on_delete=models.SET_NULL,
+                null=True, blank=True, related_name='social_links',
+            )
     icon  = models.CharField(max_length=100, blank=True,
                 help_text='Font Awesome class e.g. fa-brands fa-instagram')
     type  = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_SOCIAL, db_index=True)

@@ -54,24 +54,12 @@ def check_perm(request, model_class, action='change') -> bool:
 class DashboardView(View):
 
     def get(self, request):
-        user  = request.user
-        stats = cms_registry.get_dashboard_stats(user)
+        user = request.user
 
-        # Recent items (permission-gated)
-        from apps.articles.models    import Article
-        from apps.blog.models        import Blog
-        from apps.testimonials.models import Testimonial
-        from apps.nearby.models      import Nearby
-
-        ctx = {'stats': stats}
-        if user.is_superuser or user.has_perm('articles.view_article'):
-            ctx['recent_articles'] = Article.objects.order_by('-updated_at')[:5]
-        if user.is_superuser or user.has_perm('blog.view_blog'):
-            ctx['recent_blogs'] = Blog.objects.order_by('-updated_at')[:5]
-        if user.is_superuser or user.has_perm('testimonials.view_testimonial'):
-            ctx['recent_testimonials'] = Testimonial.objects.order_by('-created_at')[:5]
-        if user.is_superuser or user.has_perm('nearby.view_nearby'):
-            ctx['recent_nearby'] = Nearby.objects.order_by('-updated_at')[:5]
+        ctx = {
+            'stats': cms_registry.get_dashboard_stats(user),
+            'recent_modules': cms_registry.get_recent_items(user),
+        }
 
         return render(request, 'dashboard.html', ctx)
 

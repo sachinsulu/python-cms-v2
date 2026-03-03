@@ -1,9 +1,12 @@
 from rest_framework import serializers, viewsets
 from .models import Social
+from apps.media.api import MediaAssetSerializer
+
 
 
 class SocialSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source='get_type_display', read_only=True)
+    image = MediaAssetSerializer(read_only=True)
 
     class Meta:
         model  = Social

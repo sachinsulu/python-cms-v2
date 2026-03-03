@@ -1,8 +1,12 @@
 from rest_framework import serializers, viewsets
 from .models import Package, SubPackage
+from apps.media.api import MediaAssetSerializer
+
 
 
 class SubPackageSerializer(serializers.ModelSerializer):
+    image = MediaAssetSerializer(read_only=True)
+
     class Meta:
         model  = SubPackage
         fields = ['slug', 'title', 'description', 'image', 'price',
@@ -12,6 +16,7 @@ class SubPackageSerializer(serializers.ModelSerializer):
 class PackageSerializer(serializers.ModelSerializer):
     sub_packages         = SubPackageSerializer(many=True, read_only=True)
     package_type_display = serializers.CharField(source='get_package_type_display', read_only=True)
+    image                = MediaAssetSerializer(read_only=True)
 
     class Meta:
         model  = Package

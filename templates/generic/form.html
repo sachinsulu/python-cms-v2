@@ -42,7 +42,7 @@
         <div class="form-card-body">
 
           {% for field in form.visible_fields %}
-          {% if field.name not in 'meta_title,meta_description,meta_keywords,slug,image,banner_image,avatar'|split:',' %}
+          {% if field.name not in 'meta_title,meta_description,meta_keywords,slug,avatar'|split:',' and not field|is_media_widget %}
           <div class="form-group">
             <label class="form-label" for="{{ field.id_for_label }}">
               {{ field.label }}
@@ -107,22 +107,20 @@
       {% endif %}
 
       <!-- Media card -->
-      {% if 'image' in form.fields or 'banner_image' in form.fields or 'avatar' in form.fields %}
+      {% if form|has_media_fields or 'avatar' in form.fields %}
       <div class="form-card" style="margin-bottom:16px;">
         <div class="form-card-header"><i class="fa-solid fa-image"></i> Media</div>
         <div class="form-card-body">
-          {% for fname in 'image,banner_image,avatar'|split:',' %}
-          {% with field=form|getitem:fname %}
+          {% for field in form.visible_fields %}
+          {% if field|is_media_widget or field.name == 'avatar' %}
           {% if field %}
           <div class="form-group">
             <label class="form-label" for="{{ field.id_for_label }}" style="margin-bottom: 8px;">{{ field.label }}</label>
             {{ field }}
-            <!-- Empty preview container for JS to hook into -->
-            <div id="{{ fname }}Preview"></div>
             {% if field.errors %}<div class="form-error">{{ field.errors.0 }}</div>{% endif %}
           </div>
           {% endif %}
-          {% endwith %}
+          {% endif %}
           {% endfor %}
         </div>
       </div>

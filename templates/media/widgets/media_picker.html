@@ -1,0 +1,37 @@
+<div class="media-picker" id="media-picker-{{ widget.name }}">
+
+  {# Hidden input — stores MediaAsset PK #}
+  <input type="hidden"
+         name="{{ widget.name }}"
+         id="{{ widget.attrs.id }}"
+         value="{{ widget.value|default:'' }}">
+
+  {# Preview area — media-picker.js manages this via .media-picker-preview #}
+  <div class="media-picker-preview">
+    {% if asset %}
+      <div class="media-picker-thumb-wrap">
+        <img src="{{ asset.thumbnail_url }}" alt="{{ asset.alt_text }}">
+        <span class="media-picker-remove" title="Remove">&times;</span>
+        <p class="media-picker-filename">{{ asset }}</p>
+      </div>
+    {% else %}
+      <p class="media-picker-empty">No image selected</p>
+    {% endif %}
+  </div>
+
+  {# Action buttons — class names match what media-picker.js expects #}
+  <div class="media-picker-actions">
+    <input type="file"
+           class="media-picker-file-input"
+           accept="image/*"
+           style="display:none;">
+
+    <button type="button" class="btn btn-sm btn-primary media-picker-upload-btn">
+      <i class="fa-solid fa-upload"></i> Upload New
+    </button>
+
+    <button type="button" class="btn btn-sm btn-secondary media-picker-library-btn">
+      <i class="fa-solid fa-images"></i> Select from Library
+    </button>
+  </div>
+</div>

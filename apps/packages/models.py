@@ -8,7 +8,10 @@ class Package(BaseContentModel):
     TYPE_CHOICES = [(ROOM, 'Room'), (NON_ROOM, 'Non-Room')]
 
     description  = models.TextField(blank=True)
-    image        = models.ImageField(upload_to='packages/', blank=True, null=True)
+    image        = models.ForeignKey(
+                       'media.MediaAsset', on_delete=models.SET_NULL,
+                       null=True, blank=True, related_name='packages',
+                   )
     package_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=NON_ROOM)
 
     @property
@@ -22,7 +25,10 @@ class Package(BaseContentModel):
 class SubPackage(BaseContentModel):
     package     = models.ForeignKey(Package, on_delete=models.CASCADE, related_name='sub_packages')
     description = models.TextField(blank=True)
-    image       = models.ImageField(upload_to='packages/sub/', blank=True, null=True)
+    image       = models.ForeignKey(
+                      'media.MediaAsset', on_delete=models.SET_NULL,
+                      null=True, blank=True, related_name='sub_packages_media',
+                  )
     price       = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     capacity    = models.PositiveIntegerField(null=True, blank=True)
     beds        = models.PositiveIntegerField(null=True, blank=True)

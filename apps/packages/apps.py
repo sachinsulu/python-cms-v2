@@ -26,4 +26,5 @@ class PackagesConfig(AppConfig):
             stat_perm   = 'packages.view_subpackage',
             list_url    = None,
             api_viewset = SubPackageViewSet,
+            show_recent = False,
         ))

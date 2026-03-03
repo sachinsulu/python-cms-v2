@@ -15,12 +15,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.forms',
     # Third party
     'rest_framework',
     'corsheaders',
     # CMS apps
     'apps.core',
     'apps.accounts',
+    'apps.media',
     'apps.articles',
     'apps.blog',
     'apps.packages',
@@ -61,6 +63,8 @@ TEMPLATES = [
         },
     },
 ]
+
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 WSGI_APPLICATION = 'config.wsgi.application'
 

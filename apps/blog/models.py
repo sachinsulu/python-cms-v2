@@ -12,8 +12,14 @@ class Blog(BaseContentModel):
                        related_name='blogs'
                    )
     date         = models.DateField(null=True, blank=True)
-    image        = models.ImageField(upload_to='blog/', blank=True, null=True)
-    banner_image = models.ImageField(upload_to='blog/banners/', blank=True, null=True)
+    image        = models.ForeignKey(
+                       'media.MediaAsset', on_delete=models.SET_NULL,
+                       null=True, blank=True, related_name='blogs',
+                   )
+    banner_image = models.ForeignKey(
+                       'media.MediaAsset', on_delete=models.SET_NULL,
+                       null=True, blank=True, related_name='blog_banners',
+                   )
     content      = models.TextField(blank=True)
 
     class Meta(BaseContentModel.Meta):

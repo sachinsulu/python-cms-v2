@@ -1,4 +1,5 @@
 from django import forms
+from apps.media.widgets import MediaPickerWidget
 from .models import Testimonial
 
 
@@ -8,10 +9,11 @@ class TestimonialForm(forms.ModelForm):
         fields = ['title', 'name', 'content', 'rating', 'image',
                   'country', 'linksrc', 'via_type']
         widgets = {
-            'title':   forms.TextInput(attrs={'placeholder': 'Review title'}),
-            'name':    forms.TextInput(attrs={'placeholder': 'Reviewer name'}),
-            'content': forms.Textarea(attrs={'rows': 6}),
-            'rating':  forms.NumberInput(attrs={'min': 1, 'max': 5}),
+            'title':    forms.TextInput(attrs={'placeholder': 'Review title'}),
+            'name':     forms.TextInput(attrs={'placeholder': 'Reviewer name'}),
+            'content':  forms.Textarea(attrs={'rows': 6}),
+            'rating':   forms.NumberInput(attrs={'min': 1, 'max': 5}),
             'via_type': forms.TextInput(attrs={'placeholder': 'e.g. Booking, Google, Direct'}),
             'linksrc':  forms.TextInput(attrs={'placeholder': 'Source URL or reference link'}),
+            'image':    MediaPickerWidget(),
         }

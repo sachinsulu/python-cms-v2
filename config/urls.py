@@ -20,6 +20,9 @@ urlpatterns = [
     path('social/',       include('apps.social.urls')),
     path('nearby/',       include('apps.nearby.urls')),
 
+    # Media library
+    path('media/', include('apps.media.urls')),
+
     # Users & groups
     path('users/', include('apps.accounts.urls')),
 
