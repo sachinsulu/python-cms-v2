@@ -5,7 +5,9 @@
 <div class="page-header">
   <h1 class="page-title">
     Media Library
-    <span class="page-title-sub">{{ assets|length }} asset{{ assets|length|pluralize }}</span>
+    <span class="page-title-sub">
+      {{ paginator.count }} asset{{ paginator.count|pluralize }}
+    </span>
   </h1>
   <button class="btn btn-primary" id="upload-trigger">
     <i class="fa-solid fa-upload"></i> Upload
@@ -55,7 +57,7 @@
         <td class="text-muted text-sm">{{ obj.get_file_type_display }}</td>
         <td>
           <div class="toggle-wrap"
-               data-toggle-url="/core/toggle/media/{{ obj.pk }}/"
+               data-toggle-url="{% url 'toggle_status' 'media' obj.pk %}"
                title="Toggle status">
             <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
           </div>
@@ -64,7 +66,7 @@
         <td>
           <div class="action-group">
             <button class="action-btn delete" title="Delete"
-                    onclick="openDeleteModal('/core/delete/media/{{ obj.pk }}/', '{{ obj|escapejs }}')">
+                    onclick="openDeleteModal('{% url 'delete_object' 'media' obj.pk %}', '{{ obj|escapejs }}')">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
@@ -86,6 +88,28 @@
   </div>
   {% endif %}
 </div>
+
+{% if paginator.num_pages > 1 %}
+<div style="display:flex; justify-content:center; gap:8px; padding:20px;">
+  {% if page_obj.has_previous %}
+  <a href="?page={{ page_obj.previous_page_number }}{% if active_filter != 'all' %}&type={{ active_filter }}{% endif %}"
+     class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-chevron-left"></i> Prev
+  </a>
+  {% endif %}
+
+  <span style="padding:6px 12px; font-size:13px; color:var(--text-muted);">
+    Page {{ page_obj.number }} of {{ paginator.num_pages }}
+  </span>
+
+  {% if page_obj.has_next %}
+  <a href="?page={{ page_obj.next_page_number }}{% if active_filter != 'all' %}&type={{ active_filter }}{% endif %}"
+     class="btn btn-secondary btn-sm">
+    Next <i class="fa-solid fa-chevron-right"></i>
+  </a>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

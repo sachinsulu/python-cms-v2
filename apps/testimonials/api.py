@@ -14,5 +14,5 @@ class TestimonialSerializer(serializers.ModelSerializer):
 
 
 class TestimonialViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = Testimonial.objects.filter(is_active=True).order_by('position')
+    queryset         = Testimonial.objects.filter(is_active=True).select_related('image').order_by('position')
     serializer_class = TestimonialSerializer

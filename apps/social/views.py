@@ -12,14 +12,18 @@ class SocialListView(ContentListView):
     model_key           = 'social'
 
     def get_queryset(self):
-        filter = self.request.GET.get('type', Social.TYPE_SOCIAL)
-        self.request.session['social_type_filter'] = filter
-        return Social.objects.filter(type=filter)
+        # Pure — reads session but never writes it
+        type_filter = self.request.session.get('social_type_filter', Social.TYPE_SOCIAL)
+        return Social.objects.select_related('image').filter(type=type_filter)
 
     def get(self, request):
-        filter = request.GET.get('type', request.session.get('social_type_filter', Social.TYPE_SOCIAL))
+        # Only place that writes the session
+        type_filter = request.GET.get('type')
+        if type_filter in (Social.TYPE_SOCIAL, Social.TYPE_OTA):
+            request.session['social_type_filter'] = type_filter
+
         self.extra_context = {
-            'current_type': filter,
+            'current_type': request.session.get('social_type_filter', Social.TYPE_SOCIAL),
             'TYPE_SOCIAL':  Social.TYPE_SOCIAL,
             'TYPE_OTA':     Social.TYPE_OTA,
         }

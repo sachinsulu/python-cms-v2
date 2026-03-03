@@ -14,7 +14,7 @@ class SocialSerializer(serializers.ModelSerializer):
 
 
 class SocialViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = Social.objects.filter(is_active=True).order_by('position')
+    queryset         = Social.objects.filter(is_active=True).select_related('image').order_by('position')
     serializer_class = SocialSerializer
 
     def get_queryset(self):

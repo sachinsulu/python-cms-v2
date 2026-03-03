@@ -12,7 +12,7 @@ class ArticleListView(ContentListView):
     model_key           = 'article'
 
     def get_queryset(self):
-        qs     = super().get_queryset()
+        qs = Article.objects.select_related('image', 'author')
         filter = self.request.session.get('article_homepage_filter', '0')
         return qs.filter(homepage=(filter == '1'))
 

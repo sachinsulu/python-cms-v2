@@ -25,7 +25,10 @@ class PackageSerializer(serializers.ModelSerializer):
 
 
 class PackageViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = Package.objects.filter(is_active=True).prefetch_related('sub_packages').order_by('position')
+    queryset = Package.objects.filter(is_active=True)\
+        .select_related('image')\
+        .prefetch_related('sub_packages__image')\
+        .order_by('position')
     serializer_class = PackageSerializer
     lookup_field     = 'slug'
 

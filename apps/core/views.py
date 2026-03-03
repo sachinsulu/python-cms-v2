@@ -20,8 +20,10 @@ from django.utils.decorators import method_decorator
 
 from .mixins import CMSPermissionMixin, SuperuserRequiredMixin
 from .models import AuditLog
-from .audit import log_action, log_bulk_action
+from .audit import log_action, log_bulk_action, get_client_ip
 from .registry import cms_registry
+from .cache import invalidate_dashboard_cache
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -54,13 +56,19 @@ def check_perm(request, model_class, action='change') -> bool:
 class DashboardView(View):
 
     def get(self, request):
-        user = request.user
+        user    = request.user
+        version = cache.get('dashboard_stats_version', 1)
+        cache_key = f'dashboard_stats_{user.pk}_v{version}'
+        stats   = cache.get(cache_key)
+
+        if not stats:
+            stats = cms_registry.get_dashboard_stats(user)
+            cache.set(cache_key, stats, timeout=60)
 
         ctx = {
-            'stats': cms_registry.get_dashboard_stats(user),
+            'stats':          stats,
             'recent_modules': cms_registry.get_recent_items(user),
         }
-
         return render(request, 'dashboard.html', ctx)
 
 
@@ -87,6 +95,10 @@ def toggle_status(request, model_key, pk):
     if not config:
         return JsonResponse({'error': 'Invalid model'}, status=400)
 
+    # ADD THIS GUARD
+    if not config.active_field:
+        return JsonResponse({'error': 'This model does not support toggling'}, status=400)
+
     if not check_perm(request, config.model, 'change'):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
@@ -95,6 +107,7 @@ def toggle_status(request, model_key, pk):
     current = getattr(obj, field)
     setattr(obj, field, not current)
     obj.save(update_fields=[field])
+    invalidate_dashboard_cache()
 
     log_action(request, AuditLog.TOGGLE, obj, changes={field: {'before': current, 'after': not current}})
     return JsonResponse({'status': not current, 'message': f'"{obj}" status updated.'})
@@ -114,6 +127,7 @@ def delete_object(request, model_key, pk):
     obj_repr = str(obj)
     obj_id   = str(obj.pk)
     obj.delete()
+    invalidate_dashboard_cache()
 
     # Log manually since the obj is gone
     AuditLog.objects.create(
@@ -122,6 +136,8 @@ def delete_object(request, model_key, pk):
         model_name  = config.model.__name__,
         object_id   = obj_id,
         object_repr = obj_repr,
+        ip_address  = get_client_ip(request),  # ← added
+        changes     = {},
     )
     return JsonResponse({'success': True, 'message': f'"{obj_repr}" deleted.'})
 
@@ -150,6 +166,12 @@ def bulk_action(request, model_key):
 
     if action == 'toggle':
         field = config.active_field
+
+        # ADD THIS GUARD (pairs with Fix 1)
+        if not field:
+            return JsonResponse({'error': 'This model does not support toggling'}, status=400)
+
+        count = qs.count()  # ← count BEFORE update
         qs.update(**{
             field: Case(
                 When(**{field: True},  then=Value(False)),
@@ -157,13 +179,15 @@ def bulk_action(request, model_key):
                 output_field=BooleanField(),
             )
         })
-        log_bulk_action(request, AuditLog.BULK_TOGGLE, config.model.__name__, qs.count(), selected_ids)
-        return JsonResponse({'success': True, 'message': f'{len(selected_ids)} items toggled.'})
+        log_bulk_action(request, AuditLog.BULK_TOGGLE, config.model.__name__, count, selected_ids)
+        invalidate_dashboard_cache()
+        return JsonResponse({'success': True, 'message': f'{count} items toggled.'})
 
     if action == 'delete':
         count = qs.count()
         log_bulk_action(request, AuditLog.BULK_DELETE, config.model.__name__, count, selected_ids)
         qs.delete()
+        invalidate_dashboard_cache()
         return JsonResponse({'success': True, 'message': f'{count} items deleted.'})
 
 

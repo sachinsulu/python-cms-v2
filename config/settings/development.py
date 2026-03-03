@@ -12,3 +12,8 @@ DATABASES = {
 
 INSTALLED_APPS += ['django_browser_reload']
 MIDDLEWARE += ['django_browser_reload.middleware.BrowserReloadMiddleware']
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]

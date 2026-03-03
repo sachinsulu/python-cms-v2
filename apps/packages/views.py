@@ -12,6 +12,12 @@ class PackageListView(ContentListView):
     create_url          = 'package_create'
     model_key           = 'package'
 
+    def get_queryset(self):
+        from django.db.models import Count
+        return Package.objects.select_related('image').annotate(
+            sub_package_count=Count('sub_packages')
+        ).all()
+
 
 class PackageCreateView(ContentCreateView):
     model               = Package

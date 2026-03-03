@@ -11,6 +11,9 @@ class BlogListView(ContentListView):
     create_url          = 'blog_create'
     model_key           = 'blog'
 
+    def get_queryset(self):
+        return Blog.objects.select_related('image', 'banner_image', 'author').all()
+
 
 class BlogCreateView(ContentCreateView):
     template            = 'blog/form.html'

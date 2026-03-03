@@ -15,7 +15,7 @@ class BlogSerializer(serializers.ModelSerializer):
 
 
 class BlogViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = Blog.objects.filter(is_active=True).order_by('position')
+    queryset         = Blog.objects.filter(is_active=True).select_related('image', 'banner_image').order_by('position')
     serializer_class = BlogSerializer
     lookup_field     = 'slug'
     filter_backends  = [filters.SearchFilter]

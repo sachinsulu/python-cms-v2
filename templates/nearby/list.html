@@ -26,7 +26,7 @@
     {% endif %}
 </td>
 <td>
-    <div class="toggle-wrap" data-toggle-url="/core/toggle/nearby/{{ obj.pk }}/" title="Toggle">
+    <div class="toggle-wrap" data-toggle-url="{% url 'toggle_status' 'nearby' obj.pk %}" title="Toggle">
         <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
     </div>
 </td>
@@ -36,7 +36,7 @@
             <i class="fa-solid fa-pen"></i>
         </a>
         <button class="action-btn delete" title="Delete" 
-                onclick="openDeleteModal('/core/delete/nearby/{{ obj.pk }}/', '{{ obj.title|escapejs }}')">
+                onclick="openDeleteModal('{% url 'delete_object' 'nearby' obj.pk %}', '{{ obj.title|escapejs }}')">
             <i class="fa-solid fa-trash"></i>
         </button>
     </div>

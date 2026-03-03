@@ -58,7 +58,7 @@
         <td class="text-mono text-muted text-sm">{{ obj.slug }}</td>
         <td>
           <div class="toggle-wrap"
-               data-toggle-url="/core/toggle/{{ model_key }}/{{ obj.pk }}/"
+               data-toggle-url="{% url 'toggle_status' model_key obj.pk %}"
                title="Toggle status">
             <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
           </div>
@@ -70,7 +70,7 @@
               <i class="fa-solid fa-pen"></i>
             </a>
             <button class="action-btn delete" title="Delete"
-                    onclick="openDeleteModal('/core/delete/{{ model_key }}/{{ obj.pk }}/', '{{ obj.title|escapejs }}')">
+                    onclick="openDeleteModal('{% url 'delete_object' model_key obj.pk %}', '{{ obj.title|escapejs }}')">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>

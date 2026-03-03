@@ -11,6 +11,9 @@ class TestimonialListView(ContentListView):
     create_url          = 'testimonial_create'
     model_key           = 'testimonial'
 
+    def get_queryset(self):
+        return Testimonial.objects.select_related('image').all()
+
 
 class TestimonialCreateView(ContentCreateView):
     template            = 'testimonials/form.html'

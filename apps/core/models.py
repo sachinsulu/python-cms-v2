@@ -50,8 +50,8 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            # Auto-assign position at the end of the list
-            if not self.pk or self.position == 0:
+            # Auto-assign position only on creation, not on every save
+            if not self.pk:
                 last = (
                     self.__class__.objects
                     .select_for_update()

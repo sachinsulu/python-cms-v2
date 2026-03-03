@@ -12,8 +12,9 @@ from django.contrib import messages
 from django.urls import reverse
 
 from .mixins import CMSPermissionMixin
-from .models import AuditLog
 from .audit import log_action
+from .cache import invalidate_dashboard_cache
+from django.core.exceptions import ValidationError
 
 
 class ContentListView(CMSPermissionMixin, View):
@@ -31,10 +32,13 @@ class ContentListView(CMSPermissionMixin, View):
     """
     model           = None
     template        = 'generic/list.html'
-    extra_context   = {}
+    extra_context   = None
     page_title      = ''
     create_url      = None
     model_key       = None
+
+    def get_extra_context(self):
+        return self.extra_context or {}
 
     def get_queryset(self):
         return self.model.objects.all()
@@ -45,7 +49,7 @@ class ContentListView(CMSPermissionMixin, View):
             'model_key':   self.model_key or self.model.__name__.lower(),
             'page_title':  self.page_title or f'{self.model.__name__}s',
             'create_url':  self.create_url,
-            **self.extra_context,
+            **self.get_extra_context(),
         })
 
 
@@ -64,7 +68,10 @@ class ContentCreateView(CMSPermissionMixin, View):
     edit_url        = None    # URL name, e.g. 'article_edit'
     page_title      = ''
     model_key       = None
-    extra_context   = {}
+    extra_context   = None
+
+    def get_extra_context(self):
+        return self.extra_context or {}
 
     def get_form(self, data=None, files=None):
         return self.form_class(data, files)
@@ -91,7 +98,7 @@ class ContentCreateView(CMSPermissionMixin, View):
             'list_url':   self.list_url,
             'is_edit':    False,
             'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.extra_context,
+            **self.get_extra_context(),
         })
 
     def post(self, request):
@@ -99,7 +106,21 @@ class ContentCreateView(CMSPermissionMixin, View):
         if form.is_valid():
             obj = form.save(commit=False)
             self.before_save(request, obj)
+            try:
+                obj.full_clean()
+            except ValidationError as e:
+                form.add_error(None, e)
+                return render(request, self.template, {
+                    'form':       form,
+                    'page_title': self.page_title or f'Add {self.model.__name__}',
+                    'list_url':   self.list_url,
+                    'is_edit':    False,
+                    'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
+                    **self.get_extra_context(),
+                })
+
             obj.save()
+            invalidate_dashboard_cache()
             log_action(request, AuditLog.CREATE, obj)
             messages.success(request, f'"{obj}" created successfully.')
             return self.get_success_redirect(obj)
@@ -110,7 +131,7 @@ class ContentCreateView(CMSPermissionMixin, View):
             'list_url':   self.list_url,
             'is_edit':    False,
             'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.extra_context,
+            **self.get_extra_context(),
         })
 
 
@@ -126,7 +147,10 @@ class ContentUpdateView(CMSPermissionMixin, View):
     edit_url        = None
     page_title      = ''
     model_key       = None
-    extra_context   = {}
+    extra_context   = None
+
+    def get_extra_context(self):
+        return self.extra_context or {}
 
     def get_object(self, slug):
         return get_object_or_404(self.model, slug=slug)
@@ -155,7 +179,7 @@ class ContentUpdateView(CMSPermissionMixin, View):
             'list_url':   self.list_url,
             'is_edit':    True,
             'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.extra_context,
+            **self.get_extra_context(),
         })
 
     def post(self, request, slug):
@@ -172,6 +196,7 @@ class ContentUpdateView(CMSPermissionMixin, View):
             updated = form.save(commit=False)
             self.before_save(request, updated)
             updated.save()
+            invalidate_dashboard_cache()
             new_values = {
                 field: str(getattr(updated, field))
                 for field in form.changed_data
@@ -191,5 +216,5 @@ class ContentUpdateView(CMSPermissionMixin, View):
             'list_url':   self.list_url,
             'is_edit':    True,
             'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.extra_context,
+            **self.get_extra_context(),
         })

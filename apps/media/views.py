@@ -7,6 +7,7 @@ from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.shortcuts import render
+from django.core.paginator import Paginator
 
 from apps.core.mixins import CMSPermissionMixin
 
@@ -54,7 +55,7 @@ class MediaLibraryView(View):
     """
 
     def get(self, request):
-        qs = MediaAsset.objects.all()
+        qs = MediaAsset.objects.filter(is_active=True)  # ← changed
 
         file_type = request.GET.get('type')
         if file_type in ('image', 'file', 'video'):
@@ -71,9 +72,21 @@ class MediaAdminListView(CMSPermissionMixin, View):
     """Full-page admin list view for the media library."""
     permission_required = 'media.view_mediaasset'
 
+    PAGE_SIZE = 60
+
     def get(self, request):
-        assets = MediaAsset.objects.select_related('uploaded_by').order_by('-created_at')
+        qs        = MediaAsset.objects.select_related('uploaded_by').order_by('-created_at')
+        file_type = request.GET.get('type')
+        if file_type in ('image', 'file', 'video'):
+            qs = qs.filter(file_type=file_type)
+
+        paginator = Paginator(qs, self.PAGE_SIZE)
+        page      = paginator.get_page(request.GET.get('page', 1))
+
         return render(request, 'media/admin_list.html', {
-            'assets':    assets,
-            'model_key': 'media',
+            'assets':      page.object_list,
+            'page_obj':    page,
+            'paginator':   paginator,
+            'model_key':   'media',
+            'active_filter': file_type or 'all',
         })
