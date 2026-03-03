@@ -97,8 +97,8 @@
 
 {% block extra_js %}
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    initSortable('{{ model_key }}');
-  });
+  {# ✅ No DOMContentLoaded wrapper needed — extra_js runs after body,  #}
+  {# and all dependencies (SortableJS) are already loaded from <head>   #}
+  initSortable('{{ model_key }}');
 </script>
 {% endblock %}

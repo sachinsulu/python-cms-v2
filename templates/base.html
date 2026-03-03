@@ -7,9 +7,13 @@
   <title>{% block title %}CMS{% endblock %} — Python CMS</title>
   <link rel="stylesheet" href="{% static 'css/admin.css' %}">
   <link rel="stylesheet" href="{% static 'css/media-picker.css' %}">
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
+  <!-- ✅ All dependency scripts in <head> so they're ready before DOMContentLoaded fires -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/2.2.2/js/dataTables.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
   {% block extra_head %}{% endblock %}
 </head>
 
@@ -92,6 +96,7 @@
         <i class="nav-icon fa-solid fa-map-marker"></i> Nearby
       </a>
       {% endif %}
+
       {% if request.user.is_superuser or perms.media.view_mediaasset %}
       <a href="{% url 'media_admin_list' %}"
          class="sidebar-link {% if 'media' in request.resolver_match.url_name %}active{% endif %}">
@@ -168,12 +173,9 @@
   </div>
 </div>
 
-
-
-<script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+<!-- ✅ App scripts at end of body — dependencies above in <head> are already parsed -->
 <script src="{% static 'js/admin.js' %}"></script>
 <script src="{% static 'js/media-picker.js' %}"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 {% block extra_js %}{% endblock %}
 </body>

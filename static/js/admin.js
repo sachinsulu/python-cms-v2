@@ -281,6 +281,61 @@ function initSortable(modelKey) {
 }
 
 // ------------------------------------------------------------------ //
+// Global DataTables Initialization
+// ------------------------------------------------------------------ //
+
+function initAllDataTables() {
+  if (typeof DataTable === 'undefined') return;
+
+  const tables = document.querySelectorAll('.cms-table');
+
+  tables.forEach(tableEl => {
+    if (DataTable.isDataTable(tableEl) || tableEl.classList.contains('no-datatable')) return;
+
+    const isSortable = !!tableEl.querySelector('tbody[data-sortable]');
+
+    try {
+      new DataTable(tableEl, {
+        pageLength: 20,
+        lengthMenu: [10, 20, 50, 100],
+        order: [],
+        // ✅ Split into separate entries — overlapping targets in a single
+        //    entry causes DataTables 2.x to throw "Cannot read properties
+        //    of undefined (reading 'apply')" internally.
+        columnDefs: [
+          { targets: 'no-sort', orderable: false },  // any <th class="no-sort">
+          { targets: 0, orderable: false },           // drag handle col
+          { targets: 1, orderable: false },           // checkbox col
+          { targets: -1, orderable: !isSortable },    // actions col: lock when drag-sort is active
+        ],
+        language: {
+          search: "",
+          searchPlaceholder: "Search...",
+        },
+        layout: {
+          topStart: 'search',
+          topEnd: 'paging',
+          bottomStart: 'info',
+          bottomEnd: 'lengthMenu'
+        },
+        drawCallback: function () {
+          initToggles();
+        }
+      });
+    } catch (e) {
+      console.error('CMS: Error initializing DataTable:', e);
+    }
+  });
+
+  // Re-style search inputs
+  document.querySelectorAll('.dt-search input').forEach(input => {
+    if (!input.classList.contains('form-control')) {
+      input.classList.add('form-control');
+    }
+  });
+}
+
+// ------------------------------------------------------------------ //
 // Image preview & validation
 // ------------------------------------------------------------------ //
 
@@ -472,6 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initBulk();
   initImagePreview();
   initSEOToggle();
+  initAllDataTables();
 
   // Character Counters
   Object.keys(CONFIG.limits).forEach(fieldId => {
