@@ -90,6 +90,12 @@
         <i class="nav-icon fa-solid fa-map-marker"></i> Nearby
       </a>
       {% endif %}
+      {% if request.user.is_superuser or perms.media.view_mediaasset %}
+      <a href="{% url 'media_admin_list' %}"
+         class="sidebar-link {% if 'media' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="nav-icon fa-solid fa-images"></i> Media Library
+      </a>
+      {% endif %}
     </div>
 
     {% if request.user.is_superuser %}

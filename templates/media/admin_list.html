@@ -7,6 +7,9 @@
     Media Library
     <span class="page-title-sub">{{ assets|length }} asset{{ assets|length|pluralize }}</span>
   </h1>
+  <button class="btn btn-primary" id="upload-trigger">
+    <i class="fa-solid fa-upload"></i> Upload
+  </button>
 </div>
 
 <div class="table-card">
@@ -75,7 +78,76 @@
   <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
     <i class="fa-solid fa-images" style="font-size:32px; margin-bottom:12px; display:block; opacity:.3;"></i>
     No media assets yet.
+    <div style="margin-top:12px;">
+      <button class="btn btn-primary" id="upload-trigger-empty">
+        <i class="fa-solid fa-upload"></i> Upload your first asset
+      </button>
+    </div>
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*,video/*,.pdf,.doc,.docx';
+  input.multiple = true;
+
+  // Track upload progress
+  input.addEventListener('change', async () => {
+    if (!input.files.length) return;
+
+    const files  = Array.from(input.files);
+    const total  = files.length;
+    let uploaded = 0;
+    let failed   = 0;
+
+    // Show progress in toast
+    if (window.toast) toast.show(`Uploading ${total} file${total > 1 ? 's' : ''}...`);
+
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('alt_text', file.name.replace(/\.[^/.]+$/, ''));
+
+      try {
+        const res = await fetch("{% url 'media_upload' %}", {
+          method:  'POST',
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+          body:    fd,
+        });
+        const data = await res.json();
+        if (data.id) {
+          uploaded++;
+        } else {
+          failed++;
+          console.error('Upload failed for:', file.name, data);
+        }
+      } catch (err) {
+        failed++;
+        console.error('Upload error for:', file.name, err);
+      }
+    }
+
+    // Report and reload
+    if (failed === 0) {
+      if (window.toast) toast.show(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded successfully.`);
+    } else {
+      if (window.toast) toast.show(`${uploaded} uploaded, ${failed} failed.`);
+    }
+
+    setTimeout(() => location.reload(), 800);
+  });
+
+  // Wire both buttons (header + empty state) to the same hidden input
+  document.getElementById('upload-trigger')
+    ?.addEventListener('click', () => input.click());
+
+  document.getElementById('upload-trigger-empty')
+    ?.addEventListener('click', () => input.click());
+});
+</script>
 {% endblock %}
