@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from django.views import View
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
 from django.db import transaction
@@ -33,15 +34,14 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------ #
 
 def redirect_back(request, default='/'):
-    referer = request.META.get('HTTP_REFERER', default)
-    parsed  = urlparse(referer)
+    referer = request.META.get('HTTP_REFERER')
+    if not referer:
+        return redirect(default)
+    parsed = urlparse(referer)
     if parsed.netloc and parsed.netloc != request.get_host():
         return redirect(default)
-    # Block protocol-relative URLs like //evil.com
-    path = parsed.path or '/'
-    if referer.startswith('//') or not referer.startswith('/'):
-        return redirect(default)
-    return redirect(referer)
+    safe_path = parsed.path or default
+    return redirect(safe_path)
 
 
 def check_perm(request, model_class, action='change') -> bool:
@@ -93,6 +93,17 @@ class AuditLogView(SuperuserRequiredMixin, View):
     def get(self, request):
         logs = AuditLog.objects.select_related('user').all()[:200]
         return render(request, 'core/audit_log.html', {'logs': logs})
+
+
+@login_required
+@require_POST
+def clear_audit_log(request):
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    count = AuditLog.objects.count()
+    AuditLog.objects.all().delete()
+    messages.success(request, f'Audit log cleared ({count} entries deleted).')
+    return redirect('audit_log')
 
 
 # ------------------------------------------------------------------ #

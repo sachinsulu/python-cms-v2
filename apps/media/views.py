@@ -29,8 +29,8 @@ class MediaUploadView(View):
         if not uploaded:
             return JsonResponse({'error': 'No file provided'}, status=400)
 
-        max_size = getattr(settings, 'IMAGE_MAX_FILE_SIZE', 2 * 1024 * 1024)
-        allowed_exts = getattr(settings, 'IMAGE_ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp'])
+        max_size = getattr(settings, 'MEDIA_MAX_FILE_SIZE', 10 * 1024 * 1024)
+        allowed_exts = getattr(settings, 'MEDIA_ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp'])
 
         if uploaded.size > max_size:
             return JsonResponse({'error': f'File too large. Max size is {max_size // (1024*1024)}MB.'}, status=400)

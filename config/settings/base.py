@@ -109,6 +109,17 @@ IMAGE_MAX_FILE_SIZE = 2 * 1024 * 1024       # 2MB
 IMAGE_MAX_DIMENSIONS = (1920, 1280)
 IMAGE_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
 
+# Media upload settings (all file types)
+MEDIA_MAX_FILE_SIZE = 10 * 1024 * 1024      # 10MB
+MEDIA_ALLOWED_EXTENSIONS = [
+    # Images
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico',
+    # Videos
+    'mp4', 'mov', 'avi', 'mkv', 'webm',
+    # Documents
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'zip',
+]
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
