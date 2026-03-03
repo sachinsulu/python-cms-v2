@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Media Library{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    Media Library
+    <span class="page-title-sub">{{ assets|length }} asset{{ assets|length|pluralize }}</span>
+  </h1>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <button class="btn btn-warning btn-sm" onclick="bulkAction('media', 'toggle')"
+            aria-label="Toggle status of selected media assets">
+      <i class="fa-solid fa-toggle-on"></i> Toggle Status
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="bulkAction('media', 'delete')"
+            aria-label="Delete selected media assets">
+      <i class="fa-solid fa-trash"></i> Delete Selected
+    </button>
+  </div>
+
+  {% if assets %}
+  <table class="cms-table">
+    <thead>
+      <tr>
+        <th style="width:30px;"><input type="checkbox" id="select-all" aria-label="Select all media assets"></th>
+        <th style="width:50px;">Thumb</th>
+        <th>Filename</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Uploaded</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for obj in assets %}
+      <tr data-id="{{ obj.pk }}">
+        <td><input type="checkbox" class="row-checkbox" value="{{ obj.pk }}" aria-label="Select {{ obj }}"></td>
+        <td>
+          {% if obj.is_image %}
+          <img src="{{ obj.thumbnail_url }}" alt="{{ obj.alt_text }}"
+               style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
+          {% else %}
+          <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border-radius:4px;">
+            <i class="fa-solid {% if obj.file_type == 'video' %}fa-video{% else %}fa-file{% endif %}" style="opacity:.4;"></i>
+          </div>
+          {% endif %}
+        </td>
+        <td>{{ obj }}</td>
+        <td class="text-muted text-sm">{{ obj.get_file_type_display }}</td>
+        <td>
+          <div class="toggle-wrap"
+               data-toggle-url="/core/toggle/media/{{ obj.pk }}/"
+               title="Toggle status">
+            <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
+          </div>
+        </td>
+        <td class="text-muted text-sm">{{ obj.created_at|timesince }} ago</td>
+        <td>
+          <div class="action-group">
+            <button class="action-btn delete" title="Delete"
+                    onclick="openDeleteModal('/core/delete/media/{{ obj.pk }}/', '{{ obj|escapejs }}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% else %}
+  <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+    <i class="fa-solid fa-images" style="font-size:32px; margin-bottom:12px; display:block; opacity:.3;"></i>
+    No media assets yet.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

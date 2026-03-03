@@ -7,10 +7,12 @@ from django.db import models
 from django.conf import settings
 from django.core.files.base import ContentFile
 
+from apps.core.mixins_models import TimestampMixin, ActiveMixin
+
 logger = logging.getLogger(__name__)
 
 
-class MediaAsset(models.Model):
+class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
     """
     Centralized media library asset.
     All content models link here instead of storing their own ImageField.
@@ -54,8 +56,6 @@ class MediaAsset(models.Model):
         null=True, blank=True,
         related_name='media_assets',
     )
-
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
