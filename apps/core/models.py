@@ -3,27 +3,26 @@ from django.db.models import Max
 from django.conf import settings
 from django.utils.text import slugify
 
+from .mixins_models import TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin
 
-class BaseContentModel(models.Model):
+
+class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin, models.Model):
     """
     Abstract base for all CMS content types.
 
-    Provides:
-    - title + slug (auto-generated, cross-model unique via registry)
-    - is_active flag (standardised — no more active vs is_active)
-    - position (integer ordering with drag-and-drop support)
-    - created_at / updated_at timestamps
-    - SEO meta fields
+    Composes from mixins:
+    - TimestampMixin  → created_at, updated_at
+    - ActiveMixin     → is_active
+    - SortableMixin   → position
+    - SlugMixin       → slug
+    - SEOMixin        → meta_title, meta_description, meta_keywords
+
+    Adds:
+    - title (required)
+    - Auto slug generation (cross-model unique via registry)
+    - Atomic position assignment
     """
-    title            = models.CharField(max_length=255)
-    slug             = models.SlugField(unique=True, blank=True, db_index=True)
-    is_active        = models.BooleanField(default=True, db_index=True)
-    position         = models.PositiveIntegerField(default=0, db_index=True)
-    created_at       = models.DateTimeField(auto_now_add=True)
-    updated_at       = models.DateTimeField(auto_now=True)
-    meta_title       = models.CharField(max_length=60, blank=True)
-    meta_description = models.TextField(max_length=160, blank=True)
-    meta_keywords    = models.CharField(max_length=205, blank=True)
+    title = models.CharField(max_length=255)
 
     class Meta:
         abstract = True
