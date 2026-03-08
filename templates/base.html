@@ -5,13 +5,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}CMS{% endblock %} — Python CMS</title>
+
+  <!-- App styles -->
   <link rel="stylesheet" href="{% static 'css/admin.css' %}">
   <link rel="stylesheet" href="{% static 'css/media-picker.css' %}">
+
+  <!-- Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
-  <!-- ✅ All dependency scripts in <head> so they're ready before DOMContentLoaded fires -->
+
+  <!-- jQuery (Required for DataTables in some environments) -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.datatables.net/2.2.2/js/dataTables.full.min.js"></script>
+
+  <!-- DataTables 2.x -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
+  <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+
+  <!-- SortableJS for drag-and-drop row sorting -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
   {% block extra_head %}{% endblock %}

@@ -1,30 +1,44 @@
 {% extends "generic/list.html" %}
 
 {% block header_extras %}
-<div>
-  <select onchange="window.location.href='?homepage='+this.value" style="padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; background:var(--card-bg); cursor:pointer;">
-    <option value="0" {% if current_filter == '0' %}selected{% endif %}>Inner Pages</option>
-    <option value="1" {% if current_filter == '1' %}selected{% endif %}>Homepage</option>
-  </select>
-</div>
+<select
+  onchange="window.location.href='?homepage='+this.value"
+  style="padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; background:var(--card-bg);">
+  <option value="0" {% if current_filter == '0' %}selected{% endif %}>Inner Pages</option>
+  <option value="1" {% if current_filter == '1' %}selected{% endif %}>Homepage</option>
+</select>
+{% endblock %}
+
+{% block table_headers %}
+<th>Title</th>
+<th>Slug</th>
+<th>Author</th>
+<th>Status</th>
+<th>Actions</th>
 {% endblock %}
 
 {% block table_row %}
 <td>
   <a href="{% url 'article_edit' obj.slug %}">{{ obj.title }}</a>
-  {% if obj.homepage %}<span class="badge badge-blue" style="margin-left:6px;">HP</span>{% endif %}
+  {% if obj.subtitle %}
+  <div class="text-muted text-sm">{{ obj.subtitle|truncatechars:60 }}</div>
+  {% endif %}
 </td>
 <td class="text-mono text-muted text-sm">{{ obj.slug }}</td>
+<td class="text-muted text-sm">{{ obj.author.username|default:"—" }}</td>
 <td>
-  <div class="toggle-wrap" data-toggle-url="{% url 'toggle_status' 'article' obj.pk %}" title="Toggle">
+  <div class="toggle-wrap"
+       data-toggle-url="{% url 'toggle_status' 'article' obj.pk %}"
+       title="Toggle status">
     <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
   </div>
 </td>
-
 <td>
   <div class="action-group">
-    <a href="{% url 'article_edit' obj.slug %}" class="action-btn edit"><i class="fa-solid fa-pen"></i></a>
-    <button class="action-btn delete"
+    <a href="{% url 'article_edit' obj.slug %}" class="action-btn edit" title="Edit">
+      <i class="fa-solid fa-pen"></i>
+    </a>
+    <button class="action-btn delete" title="Delete"
             onclick="openDeleteModal('{% url 'delete_object' 'article' obj.pk %}', '{{ obj.title|escapejs }}')">
       <i class="fa-solid fa-trash"></i>
     </button>

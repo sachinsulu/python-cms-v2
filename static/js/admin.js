@@ -10,7 +10,7 @@
  */
 const CONFIG = {
   images: {
-    maxSize: 2 * 1024 * 1024, // 2MB
+    maxSize: 2 * 1024 * 1024,
     allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic'],
     allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']
   },
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('cms_sidebar', isCollapsed ? '0' : '1');
     });
 
-    // Restore state
     if (localStorage.getItem('cms_sidebar') === '0') {
       sidebar.classList.add('collapsed');
       shell.classList.add('sidebar-collapsed');
@@ -119,11 +118,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------------------------------ //
 
 function initToggles() {
+  // Use event delegation so toggles re-added by DataTables drawCallback work
   document.querySelectorAll('[data-toggle-url]').forEach(wrap => {
+    // Avoid double-binding by checking for a flag
+    if (wrap.dataset.toggleBound) return;
+    wrap.dataset.toggleBound = '1';
+
     wrap.addEventListener('click', async () => {
       const url = wrap.dataset.toggleUrl;
       const sw = wrap.querySelector('.toggle-switch');
-
       try {
         const res = await postJson(url, {});
         if (res.status !== undefined) {
@@ -141,8 +144,6 @@ function initToggles() {
 // Delete modal
 // ------------------------------------------------------------------ //
 
-let pendingDeleteForm = null;
-
 function openDeleteModal(url, label) {
   const overlay = document.getElementById('delete-modal');
   const text = document.getElementById('delete-modal-text');
@@ -156,31 +157,6 @@ function openDeleteModal(url, label) {
 
   form.action = url;
   overlay.classList.add('open');
-
-  // Handle submission via AJAX
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    closeDeleteModal();
-
-    // If no URL (bulk delete), bulkAction handles it
-    if (!url) return;
-
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCsrf() }
-      }).then(r => r.json());
-
-      if (res.success) {
-        toast.show(res.message || 'Deleted successfully');
-        setTimeout(() => location.reload(), 500);
-      } else {
-        toast.show(res.error || 'Delete failed');
-      }
-    } catch (err) {
-      toast.show('Server error during deletion');
-    }
-  };
 }
 
 function closeDeleteModal() {
@@ -188,10 +164,13 @@ function closeDeleteModal() {
   if (overlay) overlay.classList.remove('open');
 }
 
-// Close on overlay click
-document.addEventListener('click', e => {
+document.addEventListener('DOMContentLoaded', () => {
   const overlay = document.getElementById('delete-modal');
-  if (overlay && e.target === overlay) closeDeleteModal();
+  if (overlay) {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeDeleteModal();
+    });
+  }
 });
 
 // ------------------------------------------------------------------ //
@@ -202,30 +181,19 @@ function initBulk() {
   const selectAll = document.getElementById('select-all');
   if (!selectAll) return;
 
-  const checkboxes = () => document.querySelectorAll('.row-checkbox');
-
   selectAll.addEventListener('change', () => {
-    checkboxes().forEach(cb => { cb.checked = selectAll.checked; });
-  });
-
-  // Keep select-all in sync
-  document.addEventListener('change', e => {
-    if (e.target.classList.contains('row-checkbox')) {
-      const all = checkboxes();
-      const checked = document.querySelectorAll('.row-checkbox:checked');
-      selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
-      selectAll.checked = checked.length === all.length;
-    }
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+      cb.checked = selectAll.checked;
+    });
   });
 }
 
 async function bulkAction(modelKey, action) {
-  const checked = document.querySelectorAll('.row-checkbox:checked');
-  if (!checked.length) { toast.show('No items selected.'); return; }
+  const checked = [...document.querySelectorAll('.row-checkbox:checked')];
+  if (!checked.length) { toast.show('No items selected'); return; }
 
   if (action === 'delete') {
     openDeleteModal(null, `${checked.length} selected item(s)`);
-    // Override the form to submit bulk delete
     const form = document.getElementById('delete-form');
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -257,7 +225,86 @@ async function executeBulkAction(modelKey, action, checked) {
 }
 
 // ------------------------------------------------------------------ //
+// DataTables — initialise all .cms-table elements
+// ------------------------------------------------------------------ //
+
+// Holds the DataTables API instance for each table, keyed by the table element.
+// We need this so initSortable can tell DataTables about row reorders.
+const _dtInstances = new WeakMap();
+
+function initAllDataTables() {
+  const dtConstructor = window.DataTable || (window.jQuery && window.jQuery.fn.DataTable);
+  if (!dtConstructor) {
+    console.warn('CMS: DataTables not loaded (constructor not found).');
+    return;
+  }
+
+  document.querySelectorAll('.cms-table').forEach(tableEl => {
+    if (_dtInstances.has(tableEl) || tableEl.classList.contains('no-datatable')) return;
+
+    const isSortable = !!tableEl.querySelector('tbody[data-sortable]');
+
+    try {
+      // Use jQuery constructor if available, otherwise window.DataTable
+      const $table = window.jQuery ? window.jQuery(tableEl) : null;
+
+      const options = {
+        pageLength: 20,
+        lengthMenu: [10, 20, 50, 100],
+        order: [],
+        columnDefs: [
+          { targets: 0, orderable: false },
+          { targets: 1, orderable: false },
+          { targets: 'no-sort', orderable: false },
+          { targets: -1, orderable: !isSortable },
+        ],
+        language: {
+          search: '',
+          searchPlaceholder: 'Search...',
+          info: '_START_–_END_ of _TOTAL_',
+          infoEmpty: '0 items',
+          paginate: {
+            previous: '‹',
+            next: '›',
+          },
+        },
+        layout: {
+          topStart: 'pageLength',
+          topEnd: 'search',
+          bottomStart: '',
+          bottomEnd: 'paging'
+        },
+        drawCallback: function () {
+          initToggles();
+        },
+      };
+
+      const dtInstance = $table ? $table.DataTable(options) : new dtConstructor(tableEl, options);
+
+      // store the instance
+      _dtInstances.set(tableEl, dtInstance);
+    } catch (err) {
+      console.error('CMS: DataTable init error on', tableEl, err);
+    }
+  });
+
+  // style search inputs
+  document.querySelectorAll('.dt-search input').forEach(input => {
+    input.classList.add('form-control');
+  });
+}
+
+// ------------------------------------------------------------------ //
 // Drag-and-drop sorting (SortableJS)
+//
+// KEY RULE: SortableJS moves rows in the real DOM.
+// DataTables keeps its own internal row index.
+// After every drag, we must call dt.row.add / invalidate so the two
+// stay in sync — otherwise paging and search break after a sort.
+//
+// The simplest correct approach: after saving the order to the server,
+// reload the page. This guarantees DataTables, SortableJS, and the DB
+// are all in sync without complex row-swap bookkeeping.
 // ------------------------------------------------------------------ //
 
 function initSortable(modelKey) {
@@ -268,70 +315,26 @@ function initSortable(modelKey) {
     handle: '.drag-handle',
     animation: 150,
     ghostClass: 'sortable-ghost',
+
     onEnd: async () => {
+      // Collect the new order from the DOM (what SortableJS just produced)
       const order = [...tbody.querySelectorAll('tr[data-id]')].map(r => r.dataset.id);
+
       try {
         const res = await postJson(`/core/sort/${modelKey}/`, { order });
-        if (res.success) toast.show('Order saved');
+        if (res.success) {
+          toast.show('Order saved');
+          // Reload so DataTables re-initialises with the new server order.
+          // Without this, DataTables internal index is out of sync with the DOM
+          // and paging/search will show rows in the wrong order.
+          setTimeout(() => location.reload(), 600);
+        } else {
+          toast.show('Failed to save order');
+        }
       } catch (e) {
         toast.show('Failed to save order');
       }
     },
-  });
-}
-
-// ------------------------------------------------------------------ //
-// Global DataTables Initialization
-// ------------------------------------------------------------------ //
-
-function initAllDataTables() {
-  if (typeof DataTable === 'undefined') return;
-
-  const tables = document.querySelectorAll('.cms-table');
-
-  tables.forEach(tableEl => {
-    if (DataTable.isDataTable(tableEl) || tableEl.classList.contains('no-datatable')) return;
-
-    const isSortable = !!tableEl.querySelector('tbody[data-sortable]');
-
-    try {
-      new DataTable(tableEl, {
-        pageLength: 20,
-        lengthMenu: [10, 20, 50, 100],
-        order: [],
-        // ✅ Split into separate entries — overlapping targets in a single
-        //    entry causes DataTables 2.x to throw "Cannot read properties
-        //    of undefined (reading 'apply')" internally.
-        columnDefs: [
-          { targets: 'no-sort', orderable: false },  // any <th class="no-sort">
-          { targets: 0, orderable: false },           // drag handle col
-          { targets: 1, orderable: false },           // checkbox col
-          { targets: -1, orderable: !isSortable },    // actions col: lock when drag-sort is active
-        ],
-        language: {
-          search: "",
-          searchPlaceholder: "Search...",
-        },
-        layout: {
-          topStart: 'search',
-          topEnd: 'paging',
-          bottomStart: 'info',
-          bottomEnd: 'lengthMenu'
-        },
-        drawCallback: function () {
-          initToggles();
-        }
-      });
-    } catch (e) {
-      console.error('CMS: Error initializing DataTable:', e);
-    }
-  });
-
-  // Re-style search inputs
-  document.querySelectorAll('.dt-search input').forEach(input => {
-    if (!input.classList.contains('form-control')) {
-      input.classList.add('form-control');
-    }
   });
 }
 
@@ -346,235 +349,192 @@ function initImagePreview() {
     const imageInput = document.querySelector(`input[type="file"][name="${fieldName}"]`);
     if (!imageInput) return;
 
-    // Skip fields managed by MediaPickerWidget (handled by media-picker.js)
+    // Skip fields managed by MediaPickerWidget
     if (imageInput.closest('.media-picker')) return;
 
     let previewId = fieldName + 'Preview';
     let imagePreview = document.getElementById(previewId);
 
-    // If preview container doesn't exist, create it dynamically
     if (!imagePreview) {
       imagePreview = document.createElement('div');
       imagePreview.id = previewId;
-      // Insert it right after the input field
       imageInput.parentNode.insertBefore(imagePreview, imageInput.nextSibling);
     }
 
-    const removeInput = document.getElementById(`remove_${fieldName}`); // Optional
-    const imageLabel = imageInput.previousElementSibling;
-
-    // Django's ClearableFileInput might currently show an existing link
-    const existingImageLink = imageInput.parentNode.querySelector('a[href*="/media/"]');
-    let existingImageUrl = existingImageLink ? existingImageLink.href : null;
-
-    // Optional: Django specific clear checkbox
-    const clearCheckId = fieldName + '-clear_id';
-    const clearCheck = document.getElementById(clearCheckId) || document.querySelector(`input[name="${fieldName}-clear"]`);
-
-    function toggleInputVisibility(show) {
-      if (show) {
-        imageInput.style.opacity = '1';
-        imageInput.style.height = 'auto';
-        imageInput.style.position = 'relative';
-        if (clearCheck) clearCheck.style.display = 'inline-block';
-      } else {
-        imageInput.style.opacity = '0';
-        imageInput.style.height = '0';
-        imageInput.style.position = 'absolute';
-        if (clearCheck) clearCheck.style.display = 'none';
-      }
-    }
-
-    function renderPreview(src, isExisting = false) {
-      const labelName = fieldName.replace('_', ' ');
-      const label = isExisting ? `Current ${labelName}` : `New ${labelName} selected`;
-
-      // Clean up the default django "Currently: " and "Change: " elements
-      if (existingImageLink) {
-        existingImageLink.style.display = 'none';
-        const parent = imageInput.parentNode;
-        Array.from(parent.childNodes).forEach(node => {
-          if (node.nodeType === Node.TEXT_NODE) {
-            node.textContent = ''; // wipe text like "Currently:" and "Change:"
-          }
-          if (node.tagName === 'BR') {
-            node.style.display = 'none';
-          }
-          if (node.tagName === 'LABEL' && node.getAttribute('for') === clearCheckId) {
-            node.style.display = 'none';
-          }
-        });
-      }
-
-      imagePreview.innerHTML = `
-                <div class="preview-wrapper" style="position:relative; display:inline-block; margin-top: 10px;">
-                    <img src="${src}" style="max-width:300px; max-height:200px; border:1px solid #e5e7eb; border-radius:4px; display: block;">
-                    <span class="remove-image" style="position:absolute; top:-8px; right:-8px; background:#ef4444; color:white; border-radius:50%; width:24px; height:24px; text-align:center; line-height:24px; cursor:pointer; font-weight:bold; font-size: 16px;">×</span>
-                    <p style="margin-top: 5px; font-size: 12px; color: #666;">${label}</p>
-                </div>`;
-      toggleInputVisibility(false);
-    }
-
-    // Event: Remove Image
-    imagePreview.addEventListener('click', function (e) {
-      if (e.target.closest('.remove-image')) {
-        const labelName = fieldName.replace('_', ' ');
-        e.preventDefault();
-
-        // If there's a django clear checkbox, check it so it deletes on backend
-        if (clearCheck) clearCheck.checked = true;
-
-        if (removeInput) removeInput.value = '1';
-        imagePreview.innerHTML = `<p class="no-image text-muted" style="margin-top:8px; font-size:13px;">No ${labelName} selected</p>`;
-        imageInput.value = '';
-        toggleInputVisibility(true);
-      }
-    });
-
-    // Event: Upload New Image
-    imageInput.addEventListener('change', function () {
-      const file = this.files[0];
-      if (!file) {
-        // They canceled the file browser window
-        imagePreview.innerHTML = '';
-        toggleInputVisibility(true);
-        return;
-      }
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (!file) return;
 
       if (file.size > CONFIG.images.maxSize) {
-        toast.show(`File too large! Max 2MB.`);
-        this.value = '';
-        return;
-      }
-      if (!CONFIG.images.allowedTypes.includes(file.type)) {
-        toast.show('Invalid file type! Allowed: JPG, PNG, GIF, WebP');
-        this.value = '';
+        toast.show('Image too large — max 2 MB');
+        imageInput.value = '';
         return;
       }
 
-      if (removeInput) removeInput.value = '0';
-      if (clearCheck) clearCheck.checked = false; // uncheck delete if they uploaded new
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!CONFIG.images.allowedExtensions.includes(ext)) {
+        toast.show(`Invalid file type .${ext}`);
+        imageInput.value = '';
+        return;
+      }
 
       const reader = new FileReader();
-      reader.onload = (e) => renderPreview(e.target.result, false);
+      reader.onload = e => {
+        imagePreview.innerHTML = `<img src="${e.target.result}"
+          style="max-width:200px; max-height:140px; margin-top:8px;
+                 border-radius:6px; border:1px solid var(--border);">`;
+      };
       reader.readAsDataURL(file);
     });
-
-    if (existingImageUrl) {
-      renderPreview(existingImageUrl, true);
-    }
   });
 }
 
 // ------------------------------------------------------------------ //
-// SEO Meta Panel Toggle
+// SEO fields toggle
 // ------------------------------------------------------------------ //
 
 function initSEOToggle() {
-  const toggleBtn = document.getElementById('toggleMeta');
-  const metaContent = document.getElementById('metaContent');
-  const statusIcon = document.getElementById('metaStatusIcon');
+  const toggle = document.getElementById('seo-toggle');
+  const panel = document.getElementById('seo-panel');
+  if (!toggle || !panel) return;
 
-  if (!toggleBtn || !metaContent || !statusIcon) return;
-
-  const metaInputs = metaContent.querySelectorAll('input, textarea');
-  const form = document.querySelector('form#cms-form');
-
-  toggleBtn.addEventListener('click', function () {
-    const isHidden = metaContent.style.display === "none";
-    metaContent.style.display = isHidden ? "block" : "none";
-    statusIcon.textContent = isHidden ? "▲" : "▼";
-
-    // Toggle Required Attributes (so they are strictly required only when the panel is shown)
-    metaInputs.forEach(input => {
-      if (isHidden) input.setAttribute('required', 'required');
-      else {
-        input.removeAttribute('required');
-        input.classList.remove('input-error');
-      }
-    });
+  toggle.addEventListener('click', () => {
+    const open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    toggle.textContent = open ? '▸ SEO / Meta' : '▾ SEO / Meta';
   });
-
-  if (form) {
-    form.addEventListener('submit', function (e) {
-      // Only validate if they opened the panel
-      if (metaContent.style.display === "none") return;
-
-      let invalid = false;
-      metaInputs.forEach(input => {
-        if (input.hasAttribute('required') && !input.value.trim()) {
-          input.classList.add('input-error');
-          invalid = true;
-        } else {
-          input.classList.remove('input-error');
-        }
-      });
-
-      if (invalid) {
-        e.preventDefault();
-        toast.show("Please fill out all visible SEO / Meta fields.", "error");
-      }
-    });
-  }
 }
 
 // ------------------------------------------------------------------ //
-// Init on DOM ready
+// Slug availability check
 // ------------------------------------------------------------------ //
 
-document.addEventListener('DOMContentLoaded', () => {
-  initToggles();
-  initBulk();
-  initImagePreview();
-  initSEOToggle();
-  initAllDataTables();
+function initSlugCheck(modelName, objectId) {
+  const slugInput = document.getElementById('id_slug');
+  const titleInput = document.getElementById('id_title');
+  const slugMessage = document.getElementById('slug-status');
+  if (!slugInput) return;
 
-  // Character Counters
+  let debounceTimer;
+  let slugManuallyEdited = false;
+
+  function slugify(text) {
+    return text.toString().toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/--+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '')
+      .substring(0, 80);
+  }
+
+  function checkSlug(slug) {
+    if (!slug) {
+      if (slugMessage) { slugMessage.textContent = ''; }
+      return;
+    }
+    const params = new URLSearchParams({ slug });
+    if (objectId) params.append('exclude_id', objectId);
+
+    fetch(`/core/slug/${modelName}/?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!slugMessage) return;
+        if (data.error) {
+          slugMessage.textContent = `⚠ ${data.error}`;
+          slugMessage.style.color = '#f59e0b';
+        } else if (!data.available) {
+          slugMessage.textContent = '✗ Slug already in use';
+          slugMessage.style.color = '#dc2626';
+        } else {
+          slugMessage.textContent = '✓ Available';
+          slugMessage.style.color = '#16a34a';
+        }
+      })
+      .catch(() => { });
+  }
+
+  slugInput.addEventListener('input', () => {
+    slugManuallyEdited = true;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => checkSlug(slugInput.value.trim()), 400);
+  });
+
+  if (titleInput) {
+    titleInput.addEventListener('input', () => {
+      if (slugManuallyEdited) return;
+      slugInput.value = slugify(titleInput.value);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => checkSlug(slugInput.value), 400);
+    });
+  }
+
+  slugInput.addEventListener('blur', () => checkSlug(slugInput.value.trim()));
+}
+
+// ------------------------------------------------------------------ //
+// Character counters for SEO fields
+// ------------------------------------------------------------------ //
+
+function initCharCounters() {
   Object.keys(CONFIG.limits).forEach(fieldId => {
-    const inputField = document.getElementById(fieldId);
-    if (!inputField) return;
+    const input = document.getElementById(fieldId);
+    if (!input) return;
 
-    // Create counter container if not exists dynamically
     let counterId = fieldId + '-counter';
     let counter = document.getElementById(counterId);
     if (!counter) {
       counter = document.createElement('div');
       counter.id = counterId;
-      counter.style.fontSize = '12px';
-      counter.style.marginTop = '4px';
-      inputField.parentNode.insertBefore(counter, inputField.nextSibling);
+      counter.style.cssText = 'font-size:12px; margin-top:4px;';
+      input.parentNode.insertBefore(counter, input.nextSibling);
     }
 
-    let maxChars = CONFIG.limits[fieldId];
-    let minChars = fieldId === 'id_meta_title' ? 20 : 0;
+    const max = CONFIG.limits[fieldId];
+    const min = fieldId === 'id_meta_title' ? 20 : 0;
 
-    function updateCounter() {
-      let currentLength = inputField.value.length;
-      let remaining = maxChars - currentLength;
+    function update() {
+      const len = input.value.length;
+      const remaining = max - len;
 
-      if (currentLength > maxChars) {
-        inputField.value = inputField.value.substring(0, maxChars);
-        counter.textContent = "Limit reached";
-        counter.style.color = "#dc2626";
+      if (len > max) {
+        input.value = input.value.substring(0, max);
+        counter.textContent = 'Limit reached';
+        counter.style.color = '#dc2626';
         return;
       }
-
-      if (fieldId === 'id_meta_title' && currentLength > 0 && currentLength < minChars) {
-        counter.textContent = "More than 20 characters required";
-        counter.style.color = "#dc2626";
+      if (min && len > 0 && len < min) {
+        counter.textContent = `At least ${min} characters required`;
+        counter.style.color = '#dc2626';
       } else if (remaining === 0) {
-        counter.textContent = "Limit reached";
-        counter.style.color = "#dc2626";
+        counter.textContent = 'Limit reached';
+        counter.style.color = '#dc2626';
       } else if (remaining <= 10) {
-        counter.textContent = remaining + " characters remaining";
-        counter.style.color = "#f59e0b";
+        counter.textContent = `${remaining} characters remaining`;
+        counter.style.color = '#f59e0b';
       } else {
-        counter.textContent = remaining + " characters remaining";
-        counter.style.color = "#6b7280";
+        counter.textContent = `${remaining} characters remaining`;
+        counter.style.color = '#6b7280';
       }
     }
 
-    inputField.addEventListener("input", updateCounter);
-    updateCounter(); // init on load
+    input.addEventListener('input', update);
+    update();
   });
+}
+
+// ------------------------------------------------------------------ //
+// Bootstrap — run everything on DOMContentLoaded
+// ------------------------------------------------------------------ //
+
+
+
+window.addEventListener('load', () => {
+  initToggles();
+  initBulk();
+  initImagePreview();
+  initSEOToggle();
+  initAllDataTables();
+  initCharCounters();
 });
