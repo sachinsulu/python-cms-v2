@@ -40,7 +40,7 @@ class UserCreateForm(forms.ModelForm):
 class GroupForm(forms.ModelForm):
     permissions = forms.ModelMultipleChoiceField(
         queryset=Permission.objects.exclude(
-            content_type__app_label__in=['admin', 'contenttypes', 'sessions', 'auth']
+            content_type__app_label__in=['admin', 'contenttypes', 'sessions']
         ).select_related('content_type'),
         widget=forms.CheckboxSelectMultiple,
         required=False,

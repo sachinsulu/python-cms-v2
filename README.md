@@ -4,13 +4,21 @@ A production-grade Django CMS rebuilt from scratch with proper architecture.
 
 ## Architecture Highlights
 
-- **`BaseContentModel`** — single abstract base for all content types (slug, is_active, position, timestamps, SEO meta)
+- **`BaseContentModel`** — single abstract base for all content types (slug, is_active, position, timestamps, SEO meta).
 - **Registry pattern** — apps self-register via `AppConfig.ready()`. Adding a new content type requires zero changes to shared code.
 - **Generic CRUD views** — `ContentListView`, `ContentCreateView`, `ContentUpdateView`. Each app subclasses these with a few class attributes.
 - **Auto-wired REST API** — a single `api/router.py` builds all endpoints from the registry automatically.
 - **Audit logging** — every create/update/delete/toggle/bulk action is logged to `AuditLog`.
 - **Single template per operation** — `generic/list.html` and `generic/form.html` serve all content types.
 - **Centralized Media Library** — `apps/media` provides a global media picker and automatic WebP thumbnail generation.
+- **Modular Permissions** — Custom User/Group management with granular permissions filtering.
+- **SEO Toolset** — Auto-slug generation, character counters, and SEO meta panels for all content.
+
+## Tech Stack
+
+- **Backend**: Python 3.x, Django 5.1+, Django REST Framework (DRF).
+- **Frontend**: Vanilla CSS (no frameworks), FontAwesome 6 (Icons), DataTables 2.2+ (Interactive tables), SortableJS (Drag-and-drop sorting).
+- **Interactions**: Native Fetch API (AJAX), Toast notifications, Modal system.
 
 ## Setup
 
@@ -88,27 +96,28 @@ The dashboard stat, API endpoint, toggle/bulk/sort, and audit log all work autom
 
 ```
 python-cms-v2/
-├── config/           # Project config (settings, urls, wsgi)
-│   └── settings/     # base / development / production
+├── config/           # Project configuration (settings, urls, wsgi)
+│   └── settings/     # base / development / production settings
 ├── apps/
-│   ├── core/         # Registry, BaseContentModel, AuditLog, generic views
-│   ├── accounts/     # Custom User model, auth, user/group management
-│   ├── media/        # Centralized Media Library (assets, thumbnails)
+│   ├── core/         # Registry, BaseContentModel, AuditLog, generic views, mixins
+│   ├── accounts/     # Custom User model, Auth, User/Group management
+│   ├── media/        # Centralized Media Library (assets, thumbnails, picker)
 │   ├── articles/     # Article content type
 │   ├── blog/         # Blog post content type
 │   ├── packages/     # Package + SubPackage content types
 │   ├── testimonials/ # Testimonial content type
 │   ├── social/       # Social / OTA links
 │   └── nearby/       # Nearby locations content type
-├── api/              # REST API router (auto-wired from registry)
+├── api/              # REST API configuration (auto-wired from registry)
 ├── templates/
-│   ├── generic/      # list.html + form.html (shared by all content types)
-│   ├── base.html
-│   ├── dashboard.html
-│   └── [per-app overrides]
+│   ├── generic/      # Shared list.html + form.html for all content types
+│   ├── users/        # User/Group management templates
+│   ├── base.html     # Main dashboard layout
+│   └── dashboard.html
 ├── static/
-│   ├── css/admin.css
-│   └── js/admin.js
+│   ├── css/          # admin.css, media-picker.css
+│   ├── js/           # admin.js (core logic), media-picker.js
+│   └── img/          # Favicon and static assets
 └── requirements/
     ├── base.txt
     ├── development.txt
