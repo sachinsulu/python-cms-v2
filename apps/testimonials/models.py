@@ -1,8 +1,8 @@
 from django.db import models
-from apps.core.models import BaseContentModel
+from apps.core.models import SimpleContentModel
 
 
-class Testimonial(BaseContentModel):
+class Testimonial(SimpleContentModel):
     name     = models.CharField(max_length=255)
     content  = models.TextField()
     rating   = models.PositiveSmallIntegerField(default=5)
@@ -14,5 +14,5 @@ class Testimonial(BaseContentModel):
     linksrc  = models.CharField(max_length=500, blank=True)
     via_type = models.CharField(max_length=100, blank=True)
 
-    class Meta(BaseContentModel.Meta):
+    class Meta(SimpleContentModel.Meta):
         verbose_name_plural = 'Testimonials'

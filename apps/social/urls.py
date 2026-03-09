@@ -4,5 +4,5 @@ from .views import SocialListView, SocialCreateView, SocialUpdateView
 urlpatterns = [
     path('',                  SocialListView.as_view(),   name='social_list'),
     path('create/',           SocialCreateView.as_view(), name='social_create'),
-    path('<slug:slug>/edit/', SocialUpdateView.as_view(), name='social_edit'),
+    path('<int:pk>/edit/', SocialUpdateView.as_view(), name='social_edit'),
 ]

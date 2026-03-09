@@ -158,10 +158,15 @@ def delete_object(request, model_key, pk):
         model_name  = config.model.__name__,
         object_id   = obj_id,
         object_repr = obj_repr,
-        ip_address  = get_client_ip(request),  # ← added
+        ip_address  = get_client_ip(request),
         changes     = {},
     )
-    return JsonResponse({'success': True, 'message': f'"{obj_repr}" deleted.'})
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'"{obj_repr}" deleted.'})
+
+    messages.success(request, f'"{obj_repr}" deleted.')
+    return redirect_back(request)
 
 
 @login_required

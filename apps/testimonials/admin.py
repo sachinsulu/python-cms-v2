@@ -6,5 +6,5 @@ class TestimonialAdmin(admin.ModelAdmin):
     list_display = ('title', 'name', 'rating', 'via_type', 'is_active')
     list_filter  = ('rating', 'is_active')
     search_fields = ('title', 'name', 'content')
-    prepopulated_fields = {'slug': ('title',)}
-    exclude = ('meta_title', 'meta_description', 'meta_keywords')
+    #prepopulated_fields = {'slug': ('title',)}
+    

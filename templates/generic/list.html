@@ -63,7 +63,7 @@
           {% if field_path == 'title' %}
           <td>
             {% if edit_url_name %}
-            <a href="{% url edit_url_name obj.slug %}">{{ obj.title }}</a>
+            <a href="{% url edit_url_name obj.slug|default:obj.pk %}">{{ obj.title }}</a>
             {% else %}
             {{ obj.title }}
             {% endif %}
@@ -168,7 +168,7 @@
         <td>
           <div class="action-group">
             {% if edit_url_name %}
-            <a href="{% url edit_url_name obj.slug %}" class="action-btn edit" title="Edit">
+            <a href="{% url edit_url_name obj.slug|default:obj.pk %}" class="action-btn edit" title="Edit">
               <i class="fa-solid fa-pen"></i>
             </a>
             {% endif %}

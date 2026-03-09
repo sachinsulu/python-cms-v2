@@ -1,8 +1,8 @@
 from django.db import models
-from apps.core.models import BaseContentModel
+from apps.core.models import SimpleContentModel
 
 
-class Social(BaseContentModel):
+class Social(SimpleContentModel):
     TYPE_SOCIAL = 'social'
     TYPE_OTA    = 'ota'
     TYPE_CHOICES = [(TYPE_SOCIAL, 'Social Media'), (TYPE_OTA, 'OTA / Booking')]
@@ -16,5 +16,5 @@ class Social(BaseContentModel):
                 help_text='Font Awesome class e.g. fa-brands fa-instagram')
     type  = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_SOCIAL, db_index=True)
 
-    class Meta(BaseContentModel.Meta):
+    class Meta(SimpleContentModel.Meta):
         verbose_name_plural = 'Social / OTA Links'

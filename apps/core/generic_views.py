@@ -120,7 +120,8 @@ class ContentCreateView(CMSPermissionMixin, View):
             return redirect(self.request.path)
         # Default: stay on edit page
         if self.edit_url:
-            return redirect(reverse(self.edit_url, args=[obj.slug]))
+            identifier = getattr(obj, 'slug', getattr(obj, 'pk', None))
+            return redirect(reverse(self.edit_url, args=[identifier]))
         return redirect(self.list_url)
 
     def get(self, request):
@@ -185,8 +186,12 @@ class ContentUpdateView(CMSPermissionMixin, View):
     def get_extra_context(self):
         return self.extra_context or {}
 
-    def get_object(self, slug):
-        return get_object_or_404(self.model, slug=slug)
+    def get_object(self, **kwargs):
+        slug = kwargs.get('slug')
+        pk   = kwargs.get('pk')
+        if slug:
+            return get_object_or_404(self.model, slug=slug)
+        return get_object_or_404(self.model, pk=pk)
 
     def get_form(self, instance, data=None, files=None):
         return self.form_class(data, files, instance=instance)
@@ -199,11 +204,12 @@ class ContentUpdateView(CMSPermissionMixin, View):
         if action == 'save_and_quit':
             return redirect(self.list_url)
         if self.edit_url:
-            return redirect(reverse(self.edit_url, args=[obj.slug]))
+            identifier = getattr(obj, 'slug', getattr(obj, 'pk', None))
+            return redirect(reverse(self.edit_url, args=[identifier]))
         return redirect(self.list_url)
 
-    def get(self, request, slug):
-        obj  = self.get_object(slug)
+    def get(self, request, *args, **kwargs):
+        obj  = self.get_object(**kwargs)
         form = self.get_form(obj)
         return render(request, self.template, {
             'form':       form,
@@ -215,8 +221,8 @@ class ContentUpdateView(CMSPermissionMixin, View):
             **self.get_extra_context(),
         })
 
-    def post(self, request, slug):
-        obj  = self.get_object(slug)
+    def post(self, request, *args, **kwargs):
+        obj  = self.get_object(**kwargs)
         form = self.get_form(obj, request.POST, request.FILES)
 
         if form.is_valid():

@@ -69,6 +69,37 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
         return self.title
 
 
+class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Model):
+    """
+    A lightweight base model for CMS models that don't need SEO or Slugs.
+    - TimestampMixin  → created_at, updated_at
+    - ActiveMixin     → is_active
+    - SortableMixin   → position
+    - title (required)
+    """
+    title = models.CharField(max_length=255)
+
+    class Meta:
+        abstract = True
+        ordering = ['position']
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            # Auto-assign position only on creation, not on every save
+            if not self.pk:
+                last = (
+                    self.__class__.objects
+                    .select_for_update()
+                    .aggregate(Max('position'))['position__max']
+                )
+                self.position = (last or 0) + 1
+
+            super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
+
 # ------------------------------------------------------------------ #
 # Audit Log
 # ------------------------------------------------------------------ #
