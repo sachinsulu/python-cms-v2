@@ -8,7 +8,7 @@ A production-grade Django CMS rebuilt from scratch with proper architecture.
 - **Registry pattern** — apps self-register via `AppConfig.ready()`. Adding a new content type requires zero changes to shared code.
 - **Generic CRUD views** — `ContentListView`, `ContentCreateView`, `ContentUpdateView`. Each app subclasses these with a few class attributes.
 - **Auto-wired REST API** — a single `api/router.py` builds all endpoints from the registry automatically.
-- **Audit logging** — every create/update/delete/toggle/bulk action is logged to `AuditLog`.
+- **Audit Toolset** — every create/update/delete/toggle/bulk action is logged to `AuditLog`, featuring a **Dynamic Audit Visualizer** (side-by-side diff) for changes.
 - **Single template per operation** — `generic/list.html` and `generic/form.html` serve all content types.
 - **Centralized Media Library** — `apps/media` provides a global media picker and automatic WebP thumbnail generation.
 - **Modular Permissions** — Custom User/Group management with granular permissions filtering.
@@ -65,32 +65,33 @@ Visit `http://localhost:8000` — you'll be redirected to `/login/`.
 
 ## API Endpoints
 
-All endpoints are read-only and versioned under `/api/v1/`.
+All endpoints are read-only and versioned under `/api/`.
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/v1/articles/` | List active articles |
-| `GET /api/v1/articles/{slug}/` | Single article |
-| `GET /api/v1/blogs/` | List active blog posts |
-| `GET /api/v1/packages/` | List packages with nested sub-packages |
-| `GET /api/v1/testimonials/` | List testimonials |
-| `GET /api/v1/nearbys/` | List nearby locations |
-| `GET /api/v1/socials/?type=social` | Social links |
-| `GET /api/v1/socials/?type=ota` | OTA/booking links |
+| `GET /api/articles/` | List active articles |
+| `GET /api/articles/{slug}/` | Single article |
+| `GET /api/blogs/` | List active blog posts |
+| `GET /api/faqs/` | List FAQ entries |
+| `GET /api/packages/` | List packages with nested sub-packages |
+| `GET /api/testimonials/` | List testimonials |
+| `GET /api/nearbys/` | List nearby locations |
+| `GET /api/socials/?type=social` | Social links |
+| `GET /api/socials/?type=ota` | OTA/booking links |
 
 ## Adding a New Content Type
 
-1. Create `apps/newtype/models.py` — extend `BaseContentModel`
-2. Create `apps/newtype/forms.py` — standard Django ModelForm
-3. Create `apps/newtype/views.py` — subclass the 3 generic views
-4. Create `apps/newtype/urls.py`
-5. Create `apps/newtype/api.py` — serializer + ViewSet
-6. Create `apps/newtype/apps.py` — register in `ready()`
-7. Add to `INSTALLED_APPS` in `config/settings/base.py`
-8. Include URLs in `config/urls.py`
-9. Run `python manage.py makemigrations && python manage.py migrate`
+1.  **Create App Folder**: Create `apps/newtype/` and add an empty `__init__.py`.
+2.  **Define Model**: In `apps/newtype/models.py`, extend `BaseContentModel` (or `SimpleContentModel`).
+3.  **Create Forms**: In `apps/newtype/forms.py`, create a standard `ModelForm`.
+4.  **Generic Views**: In `apps/newtype/views.py`, subclass `ContentListView`, `ContentCreateView`, and `ContentUpdateView` from `apps.core.generic_views`.
+5.  **URLs**: Create `apps/newtype/urls.py` and include it in `config/urls.py`.
+6.  **API Serializer & ViewSet**: Create `apps/newtype/api.py`.
+7.  **Registration**: In `apps/newtype/apps.py`, register the model in `ready()` using `cms_registry.register`.
+8.  **Settings**: Add `apps.newtype` to `INSTALLED_APPS` in `config/settings/base.py`.
+9.  **Database**: Run `python manage.py makemigrations && python manage.py migrate`.
 
-The dashboard stat, API endpoint, toggle/bulk/sort, and audit log all work automatically.
+The dashboard stats, API endpoint, toggle/bulk/sort, and audit log diffs all work automatically once registered.
 
 ## Project Structure
 
@@ -104,6 +105,7 @@ python-cms-v2/
 │   ├── media/        # Centralized Media Library (assets, thumbnails, picker)
 │   ├── articles/     # Article content type
 │   ├── blog/         # Blog post content type
+│   ├── faq/          # FAQ content type
 │   ├── packages/     # Package + SubPackage content types
 │   ├── testimonials/ # Testimonial content type
 │   ├── social/       # Social / OTA links
@@ -123,3 +125,4 @@ python-cms-v2/
     ├── development.txt
     └── production.txt
 ```
+
