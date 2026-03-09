@@ -2,13 +2,19 @@ from apps.core.generic_views import ContentListView, ContentCreateView, ContentU
 from .models import FAQ
 from .forms import FAQForm
 
+
 class FAQListView(ContentListView):
     model               = FAQ
-    template            = 'faq/list.html'
     permission_required = 'faq.view_faq'
     page_title          = 'FAQ'
     create_url          = 'faq_create'
     model_key           = 'faq'
+    edit_url_name       = 'faq_edit'
+
+    list_columns = [
+        ('title',    'Title'),
+        ('is_active','Status'),
+    ]
 
 
 class FAQCreateView(ContentCreateView):

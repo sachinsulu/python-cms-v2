@@ -2,13 +2,21 @@ from apps.core.generic_views import ContentListView, ContentCreateView, ContentU
 from .models import Nearby
 from .forms import NearbyForm
 
+
 class NearbyListView(ContentListView):
     model               = Nearby
-    template            = 'nearby/list.html'
     permission_required = 'nearby.view_nearby'
     page_title          = 'Nearby'
     create_url          = 'nearby_create'
     model_key           = 'nearby'
+    edit_url_name       = 'nearby_edit'
+
+    list_columns = [
+        ('title',    'Title'),       # renders content sub-line automatically via subtitle fallback
+        ('distance', 'Distance'),
+        ('map_link', 'Map'),
+        ('is_active','Status'),
+    ]
 
 
 class NearbyCreateView(ContentCreateView):

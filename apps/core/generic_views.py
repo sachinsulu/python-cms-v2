@@ -5,6 +5,23 @@ Base classes for list, create, and update views.
 Each content app subclasses these and sets a handful of class attributes.
 
 Adding a new content type = 3 tiny view classes + URLs. Nothing else to change.
+
+list_columns API
+----------------
+Each entry is a 2-tuple: (field_path, header_label)
+
+field_path supports:
+  - plain field names: 'title', 'slug', 'is_active'
+  - dot-traversal:     'author.username'
+  - method names:      'get_package_type_display'
+
+Built-in magic column keys (handled by the template without get_attr):
+  - 'title'     → rendered as an edit link + optional subtitle/name sub-line
+  - 'is_active' → rendered as a toggle switch
+  - '__actions__' → edit + delete buttons (always appended automatically)
+
+Custom rendering beyond the built-ins is handled via the
+`column_renderers` dict (see SubPackageListView for an example).
 """
 from django.views import View
 from django.shortcuts import render, redirect, get_object_or_404
@@ -23,13 +40,17 @@ class ContentListView(CMSPermissionMixin, View):
     Generic list view for a content model.
 
     Attributes:
-        model           Django model class
-        template        Template path (defaults to generic/list.html)
-        permission_required  e.g. 'articles.view_article'
-        extra_context   Extra dict merged into template context
-        page_title      Shown in the page header
-        create_url      URL name for the "+ Add" button
-        model_key       Registry key — used by JS for toggle/delete/sort
+        model               Django model class
+        template            Template path (defaults to generic/list.html)
+        permission_required e.g. 'articles.view_article'
+        extra_context       Extra dict merged into template context
+        page_title          Shown in the page header
+        create_url          URL name for the "+ Add" button
+        model_key           Registry key — used by JS for toggle/delete/sort
+        edit_url_name       URL name for the per-row edit link, e.g. 'article_edit'
+                            (takes a single 'slug' kwarg)
+        list_columns        List of (field_path, header_label) tuples.
+                            Defaults to [('title','Title'),('slug','Slug'),('is_active','Status')]
     """
     model           = None
     template        = 'generic/list.html'
@@ -37,6 +58,14 @@ class ContentListView(CMSPermissionMixin, View):
     page_title      = ''
     create_url      = None
     model_key       = None
+    edit_url_name   = None   # e.g. 'article_edit'
+
+    # Default column set — apps override this
+    list_columns = [
+        ('title',     'Title'),
+        ('slug',      'Slug'),
+        ('is_active', 'Status'),
+    ]
 
     def get_extra_context(self):
         return self.extra_context or {}
@@ -46,10 +75,12 @@ class ContentListView(CMSPermissionMixin, View):
 
     def get(self, request):
         return render(request, self.template, {
-            'list':        self.get_queryset(),
-            'model_key':   self.model_key or self.model.__name__.lower(),
-            'page_title':  self.page_title or f'{self.model.__name__}s',
-            'create_url':  self.create_url,
+            'list':          self.get_queryset(),
+            'model_key':     self.model_key or self.model.__name__.lower(),
+            'page_title':    self.page_title or f'{self.model.__name__}s',
+            'create_url':    self.create_url,
+            'list_columns':  self.list_columns,
+            'edit_url_name': self.edit_url_name,
             **self.get_extra_context(),
         })
 
@@ -188,7 +219,6 @@ class ContentUpdateView(CMSPermissionMixin, View):
         form = self.get_form(obj, request.POST, request.FILES)
 
         if form.is_valid():
-            # Capture what changed for audit log
             old_values = {
                 field: str(getattr(obj, field))
                 for field in form.changed_data

@@ -1,24 +1,15 @@
 {% extends "generic/list.html" %}
+
+{#
+  Social list — only overrides header_extras to add the Social/OTA type filter.
+  All columns come from list_columns defined on SocialListView.
+#}
+
 {% block header_extras %}
-<select onchange="window.location.href='?type='+this.value" style="padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; background:var(--card-bg);">
+<select
+  onchange="window.location.href='?type='+this.value"
+  style="padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; background:var(--card-bg);">
   <option value="social" {% if current_type == 'social' %}selected{% endif %}>Social Media</option>
-  <option value="ota" {% if current_type == 'ota' %}selected{% endif %}>OTA / Booking</option>
+  <option value="ota"    {% if current_type == 'ota'    %}selected{% endif %}>OTA / Booking</option>
 </select>
-{% endblock %}
-{% block table_headers %}<th>Title</th><th>Icon</th><th>Link</th><th>Status</th><th>Actions</th>{% endblock %}
-{% block table_row %}
-<td><a href="{% url 'social_edit' obj.slug %}">{{ obj.title }}</a></td>
-<td>{% if obj.icon %}<i class="{{ obj.icon }}"></i>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-<td class="text-muted text-sm"><a href="{{ obj.link }}" target="_blank">{{ obj.link|truncatechars:40 }}</a></td>
-<td>
-  <div class="toggle-wrap" data-toggle-url="{% url 'toggle_status' 'social' obj.pk %}">
-    <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
-  </div>
-</td>
-<td>
-  <div class="action-group">
-    <a href="{% url 'social_edit' obj.slug %}" class="action-btn edit"><i class="fa-solid fa-pen"></i></a>
-    <button class="action-btn delete" onclick="openDeleteModal('{% url 'delete_object' 'social' obj.pk %}', '{{ obj.title|escapejs }}')"><i class="fa-solid fa-trash"></i></button>
-  </div>
-</td>
 {% endblock %}

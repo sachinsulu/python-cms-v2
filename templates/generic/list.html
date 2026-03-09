@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load cms_tags %}
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
@@ -35,47 +36,149 @@
   <table class="cms-table">
     <thead>
       <tr>
+        {# Drag handle + select-all are always present #}
         <th style="width:24px;"></th>
         <th style="width:30px;"><input type="checkbox" id="select-all"></th>
-        {% block table_headers %}
-        <th>Title</th>
-        <th>Slug</th>
-        <th>Status</th>
+
+        {# Dynamic column headers from list_columns #}
+        {% for field_path, header_label in list_columns %}
+        <th>{{ header_label }}</th>
+        {% endfor %}
+
+        {# Actions column is always the last #}
         <th>Actions</th>
-        {% endblock %}
       </tr>
     </thead>
+
     <tbody data-sortable>
       {% for obj in list %}
       <tr data-id="{{ obj.pk }}">
         <td class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></td>
         <td><input type="checkbox" class="row-checkbox" value="{{ obj.pk }}"></td>
 
-        {% block table_row %}
-        <td>
-          <a href="{% block edit_url %}#{% endblock %}">{{ obj.title }}</a>
-        </td>
-        <td class="text-mono text-muted text-sm">{{ obj.slug }}</td>
-        <td>
-          <div class="toggle-wrap"
-               data-toggle-url="{% url 'toggle_status' model_key obj.pk %}"
-               title="Toggle status">
-            <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
-          </div>
-        </td>
+        {# Dynamic column cells #}
+        {% for field_path, header_label in list_columns %}
+
+          {# ── 'title' column: edit link + optional subtitle/name sub-line ── #}
+          {% if field_path == 'title' %}
+          <td>
+            {% if edit_url_name %}
+            <a href="{% url edit_url_name obj.slug %}">{{ obj.title }}</a>
+            {% else %}
+            {{ obj.title }}
+            {% endif %}
+            {# Render a greyed sub-line for subtitle or name if present #}
+            {% with sub=obj|get_attr:"subtitle" %}
+            {% if sub %}
+            <div class="text-muted text-sm">{{ sub|truncatechars:60 }}</div>
+            {% else %}
+              {% with sub2=obj|get_attr:"name" %}
+              {% if sub2 %}
+              <div class="text-muted text-sm">{{ sub2 }}</div>
+              {% endif %}
+              {% endwith %}
+            {% endif %}
+            {% endwith %}
+          </td>
+
+          {# ── 'is_active' column: toggle switch ── #}
+          {% elif field_path == 'is_active' %}
+          <td>
+            <div class="toggle-wrap"
+                 data-toggle-url="{% url 'toggle_status' model_key obj.pk %}"
+                 title="Toggle status">
+              <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
+            </div>
+          </td>
+
+          {# ── 'slug' column: monospace muted text ── #}
+          {% elif field_path == 'slug' %}
+          <td class="text-mono text-muted text-sm">{{ obj.slug }}</td>
+
+          {# ── 'rating' column: star display ── #}
+          {% elif field_path == 'rating' %}
+          <td>
+            {% with rating=obj|get_attr:"rating" %}
+            {% for i in "12345" %}{% if forloop.counter <= rating %}⭐{% endif %}{% endfor %}
+            {% endwith %}
+          </td>
+
+          {# ── 'map_link' column: linked icon or dash ── #}
+          {% elif field_path == 'map_link' %}
+          <td>
+            {% with link=obj|get_attr:"map_link" %}
+            {% if link %}
+            <a href="{{ link }}" target="_blank" class="text-primary text-sm">
+              <i class="fa-solid fa-location-dot"></i> View Map
+            </a>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+            {% endwith %}
+          </td>
+
+          {# ── 'icon' column: render Font Awesome icon ── #}
+          {% elif field_path == 'icon' %}
+          <td>
+            {% with icon=obj|get_attr:"icon" %}
+            {% if icon %}<i class="{{ icon }}"></i>{% else %}<span class="text-muted">—</span>{% endif %}
+            {% endwith %}
+          </td>
+
+          {# ── 'link' column: external link, truncated ── #}
+          {% elif field_path == 'link' %}
+          <td class="text-muted text-sm">
+            {% with link=obj|get_attr:"link" %}
+            {% if link %}<a href="{{ link }}" target="_blank">{{ link|truncatechars:40 }}</a>{% else %}—{% endif %}
+            {% endwith %}
+          </td>
+
+          {# ── 'via_type' column: badge ── #}
+          {% elif field_path == 'via_type' %}
+          <td>
+            {% with v=obj|get_attr:"via_type" %}
+            {% if v %}<span class="badge badge-gray">{{ v }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+            {% endwith %}
+          </td>
+
+          {# ── 'sub_packages' column: manage sub-packages button ── #}
+          {% elif field_path == 'sub_packages' %}
+          <td>
+            <a href="{% url 'subpackage_list' obj.slug %}" class="btn btn-secondary btn-sm" style="font-size:11px; padding:4px 8px;">
+              <i class="fa-solid fa-layer-group"></i> Manage ({{ obj.sub_package_count|default:obj.sub_packages.count }})
+            </a>
+          </td>
+
+          {# ── date fields — render with date filter ── #}
+          {% elif field_path == 'date' %}
+          <td class="text-muted text-sm">{{ obj|get_attr:"date"|date:"M d, Y"|default:"—" }}</td>
+
+          {# ── Generic fallback: get_attr traversal → rendered as plain text / badge ── #}
+          {% else %}
+          <td class="text-muted text-sm">
+            {% with val=obj|get_attr:field_path %}
+            {{ val|default:"—" }}
+            {% endwith %}
+          </td>
+
+          {% endif %}
+        {% endfor %}
+
+        {# ── Actions column (always last) ── #}
         <td>
           <div class="action-group">
-            <a href="{% block row_edit_url %}#{% endblock %}"
-               class="action-btn edit" title="Edit">
+            {% if edit_url_name %}
+            <a href="{% url edit_url_name obj.slug %}" class="action-btn edit" title="Edit">
               <i class="fa-solid fa-pen"></i>
             </a>
+            {% endif %}
             <button class="action-btn delete" title="Delete"
                     onclick="openDeleteModal('{% url 'delete_object' model_key obj.pk %}', '{{ obj.title|escapejs }}')">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
         </td>
-        {% endblock %}
+
       </tr>
       {% endfor %}
     </tbody>
