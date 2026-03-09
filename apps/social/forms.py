@@ -6,7 +6,10 @@ from .models import Social
 class SocialForm(forms.ModelForm):
     class Meta:
         model  = Social
-        fields = ['title', 'link', 'image', 'icon']
+        fields = ['title', 'link', 'image', 'icon', 'is_active']
+        labels = {
+            'is_active': 'Active'
+        }
         widgets = {
             'title': forms.TextInput(attrs={'placeholder': 'e.g. Instagram'}),
             'link':  forms.TextInput(attrs={'placeholder': 'Enter social link or reference'}),

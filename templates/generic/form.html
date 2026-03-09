@@ -42,7 +42,7 @@
         <div class="form-card-body">
 
           {% for field in form.visible_fields %}
-          {% if field.name not in 'meta_title,meta_description,meta_keywords,slug,avatar'|split:',' and not field|is_media_widget %}
+          {% if field.name not in 'is_active,meta_title,meta_description,meta_keywords,slug,avatar'|split:',' and not field|is_media_widget %}
           <div class="form-group">
             <label class="form-label" for="{{ field.id_for_label }}">
               {{ field.label }}
@@ -90,6 +90,22 @@
     <!-- ===== Sidebar column ===== -->
     <div>
       {% block sidebar_fields %}
+
+      <!-- Status card -->
+      {% if form.is_active %}
+      <div class="form-card" style="margin-bottom:16px;">
+        <div class="form-card-header"><i class="fa-solid fa-circle-info"></i> Status</div>
+        <div class="form-card-body">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="{{ form.is_active.id_for_label }}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              {{ form.is_active }}
+              <span>{{ form.is_active.label }}</span>
+            </label>
+            {% if form.is_active.errors %}<div class="form-error">{{ form.is_active.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Slug card -->
       {% if form.slug %}

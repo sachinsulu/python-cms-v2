@@ -19,6 +19,7 @@ urlpatterns = [
     path('testimonials/', include('apps.testimonials.urls')),
     path('social/',       include('apps.social.urls')),
     path('nearby/',       include('apps.nearby.urls')),
+    path('faq/',          include('apps.faq.urls')),
 
     # Media library
     path('media/', include('apps.media.urls')),

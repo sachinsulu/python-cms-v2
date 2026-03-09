@@ -8,8 +8,11 @@ class BlogForm(forms.ModelForm):
 
     class Meta:
         model  = Blog
-        fields = ['title', 'subtitle', 'slug', 'date', 'content', 'image', 'banner_image',
+        fields = ['title', 'subtitle', 'slug', 'date', 'content', 'image', 'banner_image', 'is_active',
                   'meta_title', 'meta_description', 'meta_keywords']
+        labels = {
+            'is_active': 'Active'
+        }
         widgets = {
             'title':        forms.TextInput(attrs={'placeholder': 'Blog title'}),
             'content':      forms.Textarea(attrs={'rows': 16}),

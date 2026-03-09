@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'apps.testimonials',
     'apps.social',
     'apps.nearby',
+    'apps.faq',
     'api',
 
 ]

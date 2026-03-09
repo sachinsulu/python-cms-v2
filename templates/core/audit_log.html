@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Audit Log{% endblock %}
 {% block content %}
+
 <div class="page-header">
   <h1 class="page-title">Audit Log <span class="page-title-sub">Last 200 entries</span></h1>
   {% if logs %}
@@ -11,36 +12,45 @@
   {% endif %}
 </div>
 
-<div class="card">
-  <div class="card-body" style="padding:0;">
-    {% for log in logs %}
-    <div class="audit-entry" style="padding:14px 20px;">
-      <div>
-        <span class="audit-action-badge {{ log.action }}">{{ log.action }}</span>
-      </div>
-      <div style="flex:1;">
-        <div style="font-size:13.5px; font-weight:500;">
-          {{ log.model_name }} #{{ log.object_id }}
-          <span class="text-muted" style="font-weight:400;">— {{ log.object_repr }}</span>
-        </div>
-        <div class="text-muted text-sm" style="margin-top:3px;">
-          by <strong>{{ log.user|default:"system" }}</strong>
-          · {{ log.timestamp|timesince }} ago
-          {% if log.ip_address %}· {{ log.ip_address }}{% endif %}
-        </div>
-        {% if log.changes %}
-        <details style="margin-top:6px;">
-          <summary class="text-sm text-muted" style="cursor:pointer;">Show changes</summary>
-          <pre style="margin-top:6px; font-size:11px; background:#f8fafc; padding:10px; border-radius:6px; overflow-x:auto;">{{ log.changes|pprint }}</pre>
-        </details>
-        {% endif %}
-      </div>
-    </div>
-    {% empty %}
-    <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
-      No audit entries yet.
-    </div>
-    {% endfor %}
-  </div>
+<div class="table-card">
+  <table class="cms-table" id="audit-table">
+    <thead>
+      <tr>
+        <th class="no-sort">Action</th>
+        <th class="no-sort">Model</th>
+        <th>Object</th>
+        <th>User</th>
+        <th>IP</th>
+        <th>Time</th>
+        <th class="no-sort">Changes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td><span class="audit-action-badge {{ log.action }}">{{ log.action }}</span></td>
+        <td>{{ log.model_name }}</td>
+        <td>
+          <span style="font-weight:500;">#{{ log.object_id }}</span>
+          <span class="text-muted text-sm"> — {{ log.object_repr }}</span>
+        </td>
+        <td>{{ log.user|default:"system" }}</td>
+        <td class="text-muted text-sm">{{ log.ip_address|default:"—" }}</td>
+        <td class="text-muted text-sm" data-order="{{ log.timestamp|date:'U' }}">{{ log.timestamp|timesince }} ago</td>
+        <td>
+          {% if log.changes %}
+          <details>
+            <summary class="text-sm text-muted" style="cursor:pointer;">Show changes</summary>
+            <pre style="margin-top:6px; font-size:11px; background:#f8fafc; padding:10px; border-radius:6px; overflow-x:auto; max-width:320px;">{{ log.changes|pprint }}</pre>
+          </details>
+          {% else %}
+          <span class="text-muted text-sm">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+
 {% endblock %}

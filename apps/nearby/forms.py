@@ -4,7 +4,10 @@ from .models import Nearby
 class NearbyForm(forms.ModelForm):
     class Meta:
         model  = Nearby
-        fields = ['title', 'map_link', 'distance', 'content']
+        fields = ['title', 'map_link', 'distance', 'content', 'is_active']
+        labels = {
+            'is_active': 'Active'
+        }
         widgets = {
             'title':    forms.TextInput(attrs={'placeholder': 'e.g. Nearby Beach, City Center'}),
             'map_link': forms.TextInput(attrs={'placeholder': 'Google Maps URL'}),
