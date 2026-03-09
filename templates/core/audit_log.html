@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load cms_tags %}
 {% block title %}Audit Log{% endblock %}
 {% block content %}
 
@@ -38,9 +39,45 @@
         <td class="text-muted text-sm">{{ log.ip_address|default:"—" }}</td>
         <td class="text-muted text-sm" data-order="{{ log.timestamp|date:'U' }}">{{ log.timestamp|timesince }} ago</td>
         <td>
-          {% if log.changes %}
+          {% if log.changes and log.changes.after %}
+          <details class="diff-block">
+            <summary class="diff-summary">
+              {{ log.changes.after|length }} field{{ log.changes.after|length|pluralize }} changed
+            </summary>
+            <div class="diff-table-wrap">
+              <table class="diff-table">
+                <thead>
+                  <tr>
+                    <th class="diff-col-field">Field</th>
+                    <th class="diff-col-before">Before</th>
+                    <th class="diff-col-after">After</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for field, new_val in log.changes.after.items %}
+                    {% with old_val=log.changes.before|getitem:field %}
+                    <tr>
+                      <td class="diff-field-name">{{ field|title|cut:"_" }}</td>
+                      {% if old_val is None %}
+                        <td class="diff-initial">— <span class="diff-badge">new</span></td>
+                        <td class="diff-new">{{ new_val|default:"—" }}</td>
+                      {% elif old_val == new_val %}
+                        <td class="diff-unchanged">{{ old_val }}</td>
+                        <td class="diff-unchanged">{{ new_val }}</td>
+                      {% else %}
+                        <td class="diff-old">{{ old_val }}</td>
+                        <td class="diff-new">{{ new_val }}</td>
+                      {% endif %}
+                    </tr>
+                    {% endwith %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </details>
+          {% elif log.changes %}
           <details>
-            <summary class="text-sm text-muted" style="cursor:pointer;">Show changes</summary>
+            <summary class="text-sm text-muted" style="cursor:pointer;">Show raw data</summary>
             <pre style="margin-top:6px; font-size:11px; background:#f8fafc; padding:10px; border-radius:6px; overflow-x:auto; max-width:320px;">{{ log.changes|pprint }}</pre>
           </details>
           {% else %}
