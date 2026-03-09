@@ -1284,9 +1284,17 @@ textarea.form-control {
   border-bottom: 1px solid var(--border-color, #f3f4f6);
 }
 
-.diff-col-field  { width: 20%; }
-.diff-col-before { width: 40%; }
-.diff-col-after  { width: 40%; }
+.diff-col-field {
+  width: 20%;
+}
+
+.diff-col-before {
+  width: 40%;
+}
+
+.diff-col-after {
+  width: 40%;
+}
 
 .diff-field-name {
   font-weight: 600;
@@ -1294,10 +1302,24 @@ textarea.form-control {
   font-family: monospace;
 }
 
-.diff-old       { background: #fef2f2; color: #991b1b; }
-.diff-new       { background: #f0fdf4; color: #166534; }
-.diff-unchanged { color: var(--text-muted, #9ca3af); }
-.diff-initial   { color: var(--text-muted, #9ca3af); font-style: italic; }
+.diff-old {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.diff-new {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.diff-unchanged {
+  color: var(--text-muted, #9ca3af);
+}
+
+.diff-initial {
+  color: var(--text-muted, #9ca3af);
+  font-style: italic;
+}
 
 .diff-badge {
   display: inline-block;
@@ -1332,4 +1354,3 @@ textarea.form-control {
   background: var(--brand-light);
   color: var(--brand);
 }
-

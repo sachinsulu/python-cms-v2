@@ -1,3 +1,4 @@
+from django.shortcuts import redirect
 from apps.core.generic_views import ContentListView, ContentCreateView, ContentUpdateView
 from .models import Social
 from .forms import SocialForm
@@ -27,6 +28,7 @@ class SocialListView(ContentListView):
         type_filter = request.GET.get('type')
         if type_filter in (Social.TYPE_SOCIAL, Social.TYPE_OTA):
             request.session['social_type_filter'] = type_filter
+            return redirect(request.path)
 
         self.extra_context = {
             'current_type': request.session.get('social_type_filter', Social.TYPE_SOCIAL),
@@ -40,7 +42,12 @@ class SocialCreateView(ContentCreateView):
     model               = Social
     form_class          = SocialForm
     permission_required = 'social.add_social'
-    page_title          = 'Add Social / OTA Link'
+    
+    @property
+    def page_title(self):
+        type_filter = self.request.session.get('social_type_filter', Social.TYPE_SOCIAL)
+        return 'Add OTA Link' if type_filter == Social.TYPE_OTA else 'Add Social Link'
+
     list_url            = 'social_list'
     edit_url            = 'social_edit'
     model_key           = 'social'
@@ -53,7 +60,12 @@ class SocialUpdateView(ContentUpdateView):
     model               = Social
     form_class          = SocialForm
     permission_required = 'social.change_social'
-    page_title          = 'Edit Social / OTA Link'
+
+    @property
+    def page_title(self):
+        type_filter = self.request.session.get('social_type_filter', Social.TYPE_SOCIAL)
+        return 'Edit OTA Link' if type_filter == Social.TYPE_OTA else 'Edit Social Link'
+
     list_url            = 'social_list'
     edit_url            = 'social_edit'
     model_key           = 'social'

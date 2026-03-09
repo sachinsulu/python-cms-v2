@@ -1,3 +1,4 @@
+from django.shortcuts import redirect
 from apps.core.generic_views import ContentListView, ContentCreateView, ContentUpdateView
 from .models import Article
 from .forms import ArticleForm
@@ -28,6 +29,7 @@ class ArticleListView(ContentListView):
         hp = request.GET.get('homepage')
         if hp in ('0', '1'):
             request.session['article_homepage_filter'] = hp
+            return redirect(request.path)
         return super().get(request)
 
     def get_extra_context(self):
@@ -38,7 +40,12 @@ class ArticleCreateView(ContentCreateView):
     model               = Article
     form_class          = ArticleForm
     permission_required = 'articles.add_article'
-    page_title          = 'Add Article'
+    
+    @property
+    def page_title(self):
+        is_hp = self.request.session.get('article_homepage_filter') == '1'
+        return 'Add Homepage Article' if is_hp else 'Add Inner Page Article'
+
     list_url            = 'article_list'
     edit_url            = 'article_edit'
     model_key           = 'article'
@@ -52,7 +59,12 @@ class ArticleUpdateView(ContentUpdateView):
     model               = Article
     form_class          = ArticleForm
     permission_required = 'articles.change_article'
-    page_title          = 'Edit Article'
+    
+    @property
+    def page_title(self):
+        is_hp = self.request.session.get('article_homepage_filter') == '1'
+        return 'Edit Homepage Article' if is_hp else 'Edit Inner Page Article'
+
     list_url            = 'article_list'
     edit_url            = 'article_edit'
     model_key           = 'article'

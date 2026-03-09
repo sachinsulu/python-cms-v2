@@ -141,7 +141,8 @@ class ContentCreateView(CMSPermissionMixin, View):
             try:
                 obj.full_clean()
             except ValidationError as e:
-                form.add_error(None, e)
+                for msg in e.messages:
+                    form.add_error(None, msg)
                 return render(request, self.template, {
                     'form':       form,
                     'page_title': self.page_title or f'Add {self.model.__name__}',
@@ -230,7 +231,8 @@ class ContentUpdateView(CMSPermissionMixin, View):
             try:
                 updated.full_clean()
             except ValidationError as e:
-                form.add_error(None, e)
+                for msg in e.messages:
+                    form.add_error(None, msg)
                 return render(request, self.template, {
                     'form':       form,
                     'object':     obj,

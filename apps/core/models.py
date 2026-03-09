@@ -42,7 +42,7 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
             target_slug = slugify(self.title, allow_unicode=True)
 
         if target_slug and cms_registry.is_slug_taken(target_slug, exclude_obj=self):
-            raise ValidationError({'slug': f"The slug '{target_slug}' already exists. Please use a unique title or edit the slug manually."})
+            raise ValidationError(f"The slug '{target_slug}' already exists. Please use a unique title or edit the slug manually.")
 
     # ------------------------------------------------------------------ #
     # Save with atomic position + slug logic
