@@ -1,5 +1,6 @@
 import os
 import logging
+import threading
 from io import BytesIO
 from pathlib import Path
 
@@ -15,7 +16,11 @@ logger = logging.getLogger(__name__)
 class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
     """
     Centralized media library asset.
-    All content models link here instead of storing their own ImageField.
+    All content models reference this via ForeignKey.
+
+    Thumbnail generation is offloaded to a daemon thread after the initial
+    save so the upload response returns immediately. The thread re-fetches
+    the instance by pk to avoid sharing state with the request thread.
     """
     IMAGE = 'image'
     FILE  = 'file'
@@ -35,20 +40,14 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
         'mkv': VIDEO, 'webm': VIDEO,
     }
 
-    file = models.FileField(upload_to='media-library/%Y/%m/')
+    file      = models.FileField(upload_to='media-library/%Y/%m/')
     file_type = models.CharField(
         max_length=20, choices=FILE_TYPES, default=FILE, db_index=True,
     )
-    alt_text = models.CharField(max_length=255, blank=True)
-
-    # Auto-populated for images
-    width  = models.PositiveIntegerField(null=True, blank=True)
-    height = models.PositiveIntegerField(null=True, blank=True)
-
-    # WebP thumbnail (auto-generated for images)
-    thumbnail = models.ImageField(
-        upload_to='media-library/thumbs/', blank=True,
-    )
+    alt_text  = models.CharField(max_length=255, blank=True)
+    width     = models.PositiveIntegerField(null=True, blank=True)
+    height    = models.PositiveIntegerField(null=True, blank=True)
+    thumbnail = models.ImageField(upload_to='media-library/thumbs/', blank=True)
 
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -58,77 +57,94 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
     )
 
     class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Media Asset'
+        ordering            = ['-created_at']
+        verbose_name        = 'Media Asset'
         verbose_name_plural = 'Media Assets'
 
     def __str__(self):
-        return self.alt_text or (os.path.basename(self.file.name) if self.file else 'Untitled Asset')
-
-    # ------------------------------------------------------------------ #
-    # Auto-detect + thumbnail generation
-    # ------------------------------------------------------------------ #
+        return self.alt_text or (
+            os.path.basename(self.file.name) if self.file else 'Untitled Asset'
+        )
 
     def save(self, *args, **kwargs):
-        # Auto-detect file type from extension
         if self.file:
-            name = self.file.name
-            ext = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+            ext = self.file.name.rsplit('.', 1)[-1].lower() if '.' in self.file.name else ''
             self.file_type = self.EXTENSION_MAP.get(ext, self.FILE)
 
         super().save(*args, **kwargs)
 
-        # For images: extract dimensions + generate WebP thumbnail
-        if self.file_type == self.IMAGE and self.file:
+        # Only spawn the thread for new image uploads that don't yet have a
+        # thumbnail. update_fields saves (e.g. the thread's own write-back)
+        # are excluded to prevent an infinite loop.
+        is_partial_update = kwargs.get('update_fields') is not None
+        if (
+            not is_partial_update
+            and self.file_type == self.IMAGE
+            and self.file
+            and not self.thumbnail
+        ):
+            t = threading.Thread(
+                target=MediaAsset._generate_thumbnail_async,
+                args=(self.pk,),
+                daemon=True,
+            )
+            t.start()
+
+    @staticmethod
+    def _generate_thumbnail_async(pk: int) -> None:
+        """
+        Runs in a background daemon thread.
+        Re-fetches the instance by pk for a clean DB connection,
+        then writes dimensions + WebP thumbnail back via update_fields.
+        """
+        try:
+            instance = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
+            return
+
+        if instance.thumbnail:
+            return  # already done (duplicate thread guard)
+
+        try:
+            from PIL import Image as PILImage
+
+            img  = PILImage.open(instance.file.path)
+            w, h = img.size
             updated = []
-            try:
-                from PIL import Image
 
-                img = Image.open(self.file.path)
-                w, h = img.size
+            if instance.width != w or instance.height != h:
+                instance.width  = w
+                instance.height = h
+                updated.extend(['width', 'height'])
 
-                if self.width != w or self.height != h:
-                    self.width = w
-                    self.height = h
-                    updated.extend(['width', 'height'])
-
-                # Generate WebP thumbnail if not yet created
-                if not self.thumbnail:
-                    thumb = self._make_thumbnail(img)
-                    if thumb:
-                        updated.append('thumbnail')
-
-            except Exception as e:
-                logger.warning('MediaAsset image processing failed (pk=%s): %s', self.pk, e)
+            if instance._make_thumbnail(img):
+                updated.append('thumbnail')
 
             if updated:
-                super().save(update_fields=updated)
+                instance.save(update_fields=updated)
 
-    def _make_thumbnail(self, img, size=(600, 400), quality=85):
-        """Generate a WebP thumbnail from a PIL Image."""
+        except Exception as exc:
+            logger.warning('Thumbnail generation failed pk=%s: %s', pk, exc)
+
+    def _make_thumbnail(self, img, size=(600, 400), quality=85) -> bool:
         try:
             thumb = img.copy()
             thumb.thumbnail(size)
 
-            # Convert palette / RGBA modes for WebP compatibility
             if thumb.mode in ('P', 'PA'):
                 thumb = thumb.convert('RGBA')
-            if thumb.mode == 'RGBA':
-                # WebP supports RGBA, keep it
-                pass
-            elif thumb.mode != 'RGB':
+            if thumb.mode not in ('RGB', 'RGBA'):
                 thumb = thumb.convert('RGB')
 
-            buffer = BytesIO()
+            buffer   = BytesIO()
             thumb.save(buffer, format='WEBP', quality=quality)
-
-            stem = Path(self.file.name).stem
+            stem     = Path(self.file.name).stem
             filename = f'{stem}_{self.pk}.webp'
-
             self.thumbnail.save(filename, ContentFile(buffer.getvalue()), save=False)
             return True
-        except Exception as e:
-            logger.warning('Thumbnail generation failed (pk=%s): %s', self.pk, e)
+
+        except Exception as exc:
+            logger.warning('_make_thumbnail failed pk=%s: %s', self.pk, exc)
             return False
 
     @property
@@ -137,9 +153,7 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
 
     @property
     def thumbnail_url(self):
-        if self.thumbnail:
-            return self.thumbnail.url
-        return self.url
+        return self.thumbnail.url if self.thumbnail else self.url
 
     @property
     def is_image(self):

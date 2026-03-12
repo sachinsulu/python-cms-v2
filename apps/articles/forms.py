@@ -1,10 +1,10 @@
 from django import forms
-from django.conf import settings
+from apps.core.forms import SlugUniqueMixin
 from apps.media.widgets import MediaPickerWidget
 from .models import Article
 
 
-class ArticleForm(forms.ModelForm):
+class ArticleForm(SlugUniqueMixin, forms.ModelForm):
     slug = forms.SlugField(
         required=False,
         help_text='Auto-generated from title. Edit if needed.',
@@ -16,9 +16,7 @@ class ArticleForm(forms.ModelForm):
             'title', 'subtitle', 'slug', 'content', 'image', 'is_active',
             'meta_title', 'meta_description', 'meta_keywords',
         ]
-        labels = {
-            'is_active': 'Active'
-        }
+        labels  = {'is_active': 'Active'}
         widgets = {
             'title':    forms.TextInput(attrs={'placeholder': 'Article title'}),
             'subtitle': forms.TextInput(attrs={'placeholder': 'Optional subtitle'}),

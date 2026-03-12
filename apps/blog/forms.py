@@ -1,18 +1,20 @@
 from django import forms
+from apps.core.forms import SlugUniqueMixin
 from apps.media.widgets import MediaPickerWidget
 from .models import Blog
 
 
-class BlogForm(forms.ModelForm):
+class BlogForm(SlugUniqueMixin, forms.ModelForm):
     slug = forms.SlugField(required=False, help_text='Auto-generated from title.')
 
     class Meta:
         model  = Blog
-        fields = ['title', 'subtitle', 'slug', 'date', 'content', 'image', 'banner_image', 'is_active',
-                  'meta_title', 'meta_description', 'meta_keywords']
-        labels = {
-            'is_active': 'Active'
-        }
+        fields = [
+            'title', 'subtitle', 'slug', 'date', 'content',
+            'image', 'banner_image', 'is_active',
+            'meta_title', 'meta_description', 'meta_keywords',
+        ]
+        labels  = {'is_active': 'Active'}
         widgets = {
             'title':        forms.TextInput(attrs={'placeholder': 'Blog title'}),
             'content':      forms.Textarea(attrs={'rows': 16}),

@@ -31,7 +31,6 @@ from django.urls import reverse
 from .mixins import CMSPermissionMixin
 from .audit import log_action
 from .cache import invalidate_dashboard_cache
-from django.core.exceptions import ValidationError
 from .models import AuditLog
 
 
@@ -45,22 +44,19 @@ class ContentListView(CMSPermissionMixin, View):
         permission_required e.g. 'articles.view_article'
         extra_context       Extra dict merged into template context
         page_title          Shown in the page header
-        create_url          URL name for the "+ Add" button
+        create_url          URL name for the Add button
         model_key           Registry key — used by JS for toggle/delete/sort
-        edit_url_name       URL name for the per-row edit link, e.g. 'article_edit'
-                            (takes a single 'slug' kwarg)
-        list_columns        List of (field_path, header_label) tuples.
-                            Defaults to [('title','Title'),('slug','Slug'),('is_active','Status')]
+        edit_url_name       URL name for the per-row edit link
+        list_columns        List of (field_path, header_label) tuples
     """
-    model           = None
-    template        = 'generic/list.html'
-    extra_context   = None
-    page_title      = ''
-    create_url      = None
-    model_key       = None
-    edit_url_name   = None   # e.g. 'article_edit'
+    model         = None
+    template      = 'generic/list.html'
+    extra_context = None
+    page_title    = ''
+    create_url    = None
+    model_key     = None
+    edit_url_name = None
 
-    # Default column set — apps override this
     list_columns = [
         ('title',     'Title'),
         ('slug',      'Slug'),
@@ -90,26 +86,39 @@ class ContentCreateView(CMSPermissionMixin, View):
     Generic create view for a content model.
 
     Hooks:
-        before_save(request, obj)  — set author, homepage flag, parent FK, etc.
+        before_save(request, obj)  — set author, flags, parent FK, etc.
         get_success_redirect(obj)  — override for custom post-save redirect.
     """
-    model           = None
-    form_class      = None
-    template        = 'generic/form.html'
-    list_url        = None
-    edit_url        = None    # URL name, e.g. 'article_edit'
-    page_title      = ''
-    model_key       = None
-    extra_context   = None
+    model         = None
+    form_class    = None
+    template      = 'generic/form.html'
+    list_url      = None
+    edit_url      = None
+    page_title    = ''
+    model_key     = None
+    extra_context = None
 
     def get_extra_context(self):
         return self.extra_context or {}
+
+    def _build_context(self, form):
+        """
+        Single source of truth for the create-view template context.
+        Replaces the 3 copy-pasted inline dicts from the original.
+        """
+        return {
+            'form':       form,
+            'page_title': self.page_title or f'Add {self.model.__name__}',
+            'list_url':   self.list_url,
+            'is_edit':    False,
+            'model_key':  self.model_key or (self.model.__name__.lower() if self.model else ''),
+            **self.get_extra_context(),
+        }
 
     def get_form(self, data=None, files=None):
         return self.form_class(data, files)
 
     def before_save(self, request, obj):
-        """Override to inject extra fields before saving."""
         pass
 
     def get_success_redirect(self, obj):
@@ -118,73 +127,59 @@ class ContentCreateView(CMSPermissionMixin, View):
             return redirect(self.list_url)
         if action == 'save_and_new':
             return redirect(self.request.path)
-        # Default: stay on edit page
         if self.edit_url:
             identifier = getattr(obj, 'slug', getattr(obj, 'pk', None))
             return redirect(reverse(self.edit_url, args=[identifier]))
         return redirect(self.list_url)
 
     def get(self, request):
-        return render(request, self.template, {
-            'form':       self.get_form(),
-            'page_title': self.page_title or f'Add {self.model.__name__}',
-            'list_url':   self.list_url,
-            'is_edit':    False,
-            'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.get_extra_context(),
-        })
+        return render(request, self.template, self._build_context(self.get_form()))
 
     def post(self, request):
         form = self.get_form(request.POST, request.FILES)
         if form.is_valid():
             obj = form.save(commit=False)
             self.before_save(request, obj)
-            try:
-                obj.full_clean()
-            except ValidationError as e:
-                for msg in e.messages:
-                    form.add_error(None, msg)
-                return render(request, self.template, {
-                    'form':       form,
-                    'page_title': self.page_title or f'Add {self.model.__name__}',
-                    'list_url':   self.list_url,
-                    'is_edit':    False,
-                    'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-                    **self.get_extra_context(),
-                })
-
             obj.save()
             invalidate_dashboard_cache()
             log_action(request, AuditLog.CREATE, obj)
             messages.success(request, f'"{obj}" created successfully.')
             return self.get_success_redirect(obj)
 
-        return render(request, self.template, {
-            'form':       form,
-            'page_title': self.page_title or f'Add {self.model.__name__}',
-            'list_url':   self.list_url,
-            'is_edit':    False,
-            'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.get_extra_context(),
-        })
+        return render(request, self.template, self._build_context(form))
 
 
 class ContentUpdateView(CMSPermissionMixin, View):
     """
     Generic update view for a content model.
-    Looked up by slug by default — override get_object() for different lookups.
+    Looked up by slug by default — override get_object() for pk lookups.
     """
-    model           = None
-    form_class      = None
-    template        = 'generic/form.html'
-    list_url        = None
-    edit_url        = None
-    page_title      = ''
-    model_key       = None
-    extra_context   = None
+    model         = None
+    form_class    = None
+    template      = 'generic/form.html'
+    list_url      = None
+    edit_url      = None
+    page_title    = ''
+    model_key     = None
+    extra_context = None
 
     def get_extra_context(self):
         return self.extra_context or {}
+
+    def _build_context(self, form, obj):
+        """
+        Single source of truth for the update-view template context.
+        Replaces the 2 copy-pasted inline dicts from the original.
+        """
+        return {
+            'form':       form,
+            'object':     obj,
+            'page_title': self.page_title or f'Edit {self.model.__name__}',
+            'list_url':   self.list_url,
+            'is_edit':    True,
+            'model_key':  self.model_key or (self.model.__name__.lower() if self.model else ''),
+            **self.get_extra_context(),
+        }
 
     def get_object(self, **kwargs):
         slug = kwargs.get('slug')
@@ -209,17 +204,8 @@ class ContentUpdateView(CMSPermissionMixin, View):
         return redirect(self.list_url)
 
     def get(self, request, *args, **kwargs):
-        obj  = self.get_object(**kwargs)
-        form = self.get_form(obj)
-        return render(request, self.template, {
-            'form':       form,
-            'object':     obj,
-            'page_title': self.page_title or f'Edit {self.model.__name__}',
-            'list_url':   self.list_url,
-            'is_edit':    True,
-            'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.get_extra_context(),
-        })
+        obj = self.get_object(**kwargs)
+        return render(request, self.template, self._build_context(self.get_form(obj), obj))
 
     def post(self, request, *args, **kwargs):
         obj  = self.get_object(**kwargs)
@@ -233,24 +219,9 @@ class ContentUpdateView(CMSPermissionMixin, View):
             }
             updated = form.save(commit=False)
             self.before_save(request, updated)
-
-            try:
-                updated.full_clean()
-            except ValidationError as e:
-                for msg in e.messages:
-                    form.add_error(None, msg)
-                return render(request, self.template, {
-                    'form':       form,
-                    'object':     obj,
-                    'page_title': self.page_title or f'Edit {self.model.__name__}',
-                    'list_url':   self.list_url,
-                    'is_edit':    True,
-                    'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-                    **self.get_extra_context(),
-                })
-
             updated.save()
             invalidate_dashboard_cache()
+
             new_values = {
                 field: str(getattr(updated, field))
                 for field in form.changed_data
@@ -263,12 +234,4 @@ class ContentUpdateView(CMSPermissionMixin, View):
             messages.success(request, f'"{updated}" saved.')
             return self.get_success_redirect(updated)
 
-        return render(request, self.template, {
-            'form':       form,
-            'object':     obj,
-            'page_title': self.page_title or f'Edit {self.model.__name__}',
-            'list_url':   self.list_url,
-            'is_edit':    True,
-            'model_key':  self.model_key or self.model.__name__.lower() if getattr(self, 'model', None) else '',
-            **self.get_extra_context(),
-        })
+        return render(request, self.template, self._build_context(form, obj))

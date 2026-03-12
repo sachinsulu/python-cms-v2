@@ -6,6 +6,35 @@ from django.utils.text import slugify
 from .mixins_models import TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin
 
 
+class GlobalSlug(models.Model):
+    """
+    Single source of truth for slug uniqueness across all content models.
+
+    slug       — the slug string, PK — DB-enforced unique at the schema level
+    model_name — e.g. 'Article', 'Blog', 'Package'
+    object_id  — PK of the owning content object
+
+    Maintained automatically by BaseContentModel.save() and .delete().
+    Never write to this table directly from application code.
+    """
+    slug       = models.SlugField(primary_key=True, max_length=255)
+    model_name = models.CharField(max_length=100)
+    object_id  = models.PositiveIntegerField()
+
+    class Meta:
+        verbose_name        = 'Global Slug'
+        verbose_name_plural = 'Global Slugs'
+        indexes = [
+            models.Index(
+                fields=['model_name', 'object_id'],
+                name='core_globalslug_model_obj_idx',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.slug} → {self.model_name}:{self.object_id}'
+
+
 class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin, models.Model):
     """
     Abstract base for all CMS content types.
@@ -19,8 +48,21 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
 
     Adds:
     - title (required)
-    - Auto slug generation (cross-model unique via registry)
+    - Auto slug generation
     - Atomic position assignment
+    - GlobalSlug maintenance (upsert on save, delete on delete)
+
+    Slug uniqueness strategy (three layers):
+      1. Form layer  — SlugUniqueMixin.clean_slug() does ONE query against
+                       GlobalSlug before the user sees the save button.
+      2. Save layer  — save() upserts into GlobalSlug inside the same
+                       transaction, so stale data never persists.
+      3. DB layer    — GlobalSlug.slug is a PK (unique), so a race condition
+                       between two simultaneous saves raises IntegrityError
+                       rather than silently corrupting data.
+
+    clean() is intentionally absent — slug validation belongs in the
+    form layer, not the model layer.
     """
     title = models.CharField(max_length=255)
 
@@ -28,29 +70,8 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
         abstract = True
         ordering = ['position']
 
-    # ------------------------------------------------------------------ #
-    # Slug generation
-    # ------------------------------------------------------------------ #
-
-    def clean(self):
-        super().clean()
-        from .registry import cms_registry
-        from django.core.exceptions import ValidationError
-
-        target_slug = self.slug
-        if not target_slug and self.title:
-            target_slug = slugify(self.title, allow_unicode=True)
-
-        if target_slug and cms_registry.is_slug_taken(target_slug, exclude_obj=self):
-            raise ValidationError(f"The slug '{target_slug}' already exists. Please use a unique title or edit the slug manually.")
-
-    # ------------------------------------------------------------------ #
-    # Save with atomic position + slug logic
-    # ------------------------------------------------------------------ #
-
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            # Auto-assign position only on creation, not on every save
             if not self.pk:
                 last = (
                     self.__class__.objects
@@ -59,11 +80,35 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
                 )
                 self.position = (last or 0) + 1
 
-            # Auto-generate slug from title
             if not self.slug:
                 self.slug = slugify(self.title, allow_unicode=True)
 
+            old_slug = None
+            if self.pk:
+                try:
+                    old_slug = self.__class__.objects.only('slug').get(pk=self.pk).slug
+                except self.__class__.DoesNotExist:
+                    pass
+
             super().save(*args, **kwargs)
+
+            if old_slug and old_slug != self.slug:
+                GlobalSlug.objects.filter(slug=old_slug).delete()
+
+            # Upsert GlobalSlug in the same transaction.
+            # update_or_create handles both new objects and slug-unchanged edits.
+            GlobalSlug.objects.update_or_create(
+                slug=self.slug,
+                defaults={
+                    'model_name': self.__class__.__name__,
+                    'object_id':  self.pk,
+                },
+            )
+
+    def delete(self, *args, **kwargs):
+        with transaction.atomic():
+            GlobalSlug.objects.filter(slug=self.slug).delete()
+            super().delete(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -71,11 +116,8 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
 
 class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Model):
     """
-    A lightweight base model for CMS models that don't need SEO or Slugs.
-    - TimestampMixin  → created_at, updated_at
-    - ActiveMixin     → is_active
-    - SortableMixin   → position
-    - title (required)
+    Lightweight base for CMS models that don't need SEO or slugs.
+    No GlobalSlug involvement — these models carry no slug field.
     """
     title = models.CharField(max_length=255)
 
@@ -85,7 +127,6 @@ class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Mode
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            # Auto-assign position only on creation, not on every save
             if not self.pk:
                 last = (
                     self.__class__.objects
@@ -93,7 +134,6 @@ class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Mode
                     .aggregate(Max('position'))['position__max']
                 )
                 self.position = (last or 0) + 1
-
             super().save(*args, **kwargs)
 
     def __str__(self):
@@ -127,7 +167,7 @@ class AuditLog(models.Model):
                       settings.AUTH_USER_MODEL,
                       null=True, blank=True,
                       on_delete=models.SET_NULL,
-                      related_name='audit_logs'
+                      related_name='audit_logs',
                   )
     action      = models.CharField(max_length=20, choices=ACTION_CHOICES)
     model_name  = models.CharField(max_length=100, db_index=True)

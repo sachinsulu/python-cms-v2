@@ -71,19 +71,23 @@ class CMSRegistry:
 
     def is_slug_taken(self, slug: str, exclude_obj=None) -> bool:
         """
-        Returns True if `slug` is used by any registered model.
-        Pass exclude_obj when editing to skip the object being updated.
+        Returns True if slug is already registered in GlobalSlug.
+
+        One query regardless of how many content models exist.
+        exclude_obj: pass the current instance when editing so its own
+                     slug row is not counted as a conflict.
         """
-        for key, config in self._registry.items():
-            model = config.model
-            if not hasattr(model, 'slug'):
-                continue
-            qs = model.objects.filter(slug=slug)
-            if exclude_obj and isinstance(exclude_obj, model):
-                qs = qs.exclude(pk=exclude_obj.pk)
-            if qs.exists():
-                return True
-        return False
+        from apps.core.models import GlobalSlug
+
+        qs = GlobalSlug.objects.filter(slug=slug)
+
+        if exclude_obj is not None and getattr(exclude_obj, 'pk', None):
+            qs = qs.exclude(
+                model_name=exclude_obj.__class__.__name__,
+                object_id=exclude_obj.pk,
+            )
+
+        return qs.exists()
 
     # ------------------------------------------------------------------ #
     # Dashboard helpers
