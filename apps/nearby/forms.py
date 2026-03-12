@@ -10,7 +10,11 @@ class NearbyForm(forms.ModelForm):
         }
         widgets = {
             'title':    forms.TextInput(attrs={'placeholder': 'e.g. Nearby Beach, City Center'}),
-            'map_link': forms.TextInput(attrs={'placeholder': 'Google Maps URL'}),
+            # URLInput renders <input type="url"> — native browser URL
+            # validation on mobile and consistent with the URLField type.
+            'map_link': forms.URLInput(attrs={
+                'placeholder': 'https://maps.google.com/?q=...',
+            }),
             'distance': forms.TextInput(attrs={'placeholder': 'e.g. 500m, 10 mins walk'}),
             'content':  forms.Textarea(attrs={'rows': 4, 'placeholder': 'Brief description'}),
         }
