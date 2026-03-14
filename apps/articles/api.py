@@ -11,7 +11,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         model  = Article
         fields = [
             'slug', 'title', 'subtitle', 'content', 'image',
-            'homepage', 'meta_title', 'meta_description', 'created_at', 'updated_at',
+            'homepage', 'meta_title', 'meta_description', 'position', 'is_active',
         ]
 
 
