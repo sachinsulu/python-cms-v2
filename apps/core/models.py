@@ -2,6 +2,8 @@ from django.db import models, transaction
 from django.db.models import Max
 from django.conf import settings
 from django.utils.text import slugify
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from .mixins_models import TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin
 
@@ -50,7 +52,7 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
     - title (required)
     - Auto slug generation
     - Atomic position assignment
-    - GlobalSlug maintenance (upsert on save, delete on delete)
+    - GlobalSlug maintenance (upsert on save, delete on signal)
 
     Slug uniqueness strategy (three layers):
       1. Form layer  — SlugUniqueMixin.clean_slug() does ONE query against
@@ -107,7 +109,6 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
 
     def delete(self, *args, **kwargs):
         with transaction.atomic():
-            GlobalSlug.objects.filter(slug=self.slug).delete()
             super().delete(*args, **kwargs)
 
     def __str__(self):
@@ -187,3 +188,14 @@ class AuditLog(models.Model):
     def __str__(self):
         user = self.user.username if self.user else 'system'
         return f"[{self.timestamp:%Y-%m-%d %H:%M}] {user} {self.action} {self.model_name}:{self.object_id}"
+
+
+@receiver(post_delete)
+def remove_global_slug_on_delete(sender, instance, **kwargs):
+    """
+    Ensure the GlobalSlug entry is removed when any BaseContentModel
+    instance is deleted. This catches QuerySet.delete() (bulk deletes)
+    as well as regular instance.delete().
+    """
+    if isinstance(instance, BaseContentModel) and hasattr(instance, 'slug') and instance.slug:
+        GlobalSlug.objects.filter(slug=instance.slug).delete()

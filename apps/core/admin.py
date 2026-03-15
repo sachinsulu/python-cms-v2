@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import AuditLog
+from .models import AuditLog, GlobalSlug
+
+@admin.register(GlobalSlug)
+class GlobalSlugAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'model_name', 'object_id')
+    search_fields = ('slug', 'model_name', 'object_id')
+    list_filter = ('model_name',)
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
