@@ -34,6 +34,6 @@ class PackageViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class SubPackageViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = SubPackage.objects.filter(is_active=True, package__is_active=True).order_by('position')
+    queryset         = SubPackage.objects.filter(is_active=True, package__is_active=True).select_related('image').order_by('position')
     serializer_class = SubPackageSerializer
     lookup_field     = 'slug'

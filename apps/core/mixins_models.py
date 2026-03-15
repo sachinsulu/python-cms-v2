@@ -35,8 +35,7 @@ class SortableMixin(models.Model):
 
 
 class SlugMixin(models.Model):
-    """URL-friendly slug, auto-generated from title if present."""
-    slug = models.SlugField(unique=True, blank=True, db_index=True)
+    slug = models.SlugField(blank=True, db_index=True)
 
     class Meta:
         abstract = True
