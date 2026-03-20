@@ -110,7 +110,7 @@
       {% if request.user.is_superuser or perms.faq.view_faq %}
       <a href="{% url 'faq_list' %}"
          class="sidebar-link {% if 'faq' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="nav-icon fa-solid fa-map-marker"></i> FAQ
+        <i class="nav-icon fa-solid fa-question"></i> FAQ
       </a>
       {% endif %}
 

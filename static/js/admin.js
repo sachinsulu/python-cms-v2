@@ -3,7 +3,7 @@
  * Handles: sidebar, messages, toggle, bulk actions, drag-sort, slug check, modal
  */
 
-'use strict';
+"use strict";
 
 /**
  * Global Configuration
@@ -11,14 +11,20 @@
 const CONFIG = {
   images: {
     maxSize: 2 * 1024 * 1024,
-    allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic'],
-    allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']
+    allowedTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/heic",
+    ],
+    allowedExtensions: ["jpg", "jpeg", "png", "gif", "webp", "heic"],
   },
   limits: {
-    'id_meta_title': 60,
-    'id_meta_description': 160,
-    'id_meta_keywords': 205
-  }
+    id_meta_title: 60,
+    id_meta_description: 160,
+    id_meta_keywords: 205,
+  },
 };
 
 // ------------------------------------------------------------------ //
@@ -26,26 +32,26 @@ const CONFIG = {
 // ------------------------------------------------------------------ //
 
 function getCsrf() {
-  const meta = document.querySelector('[name=csrfmiddlewaretoken]');
+  const meta = document.querySelector("[name=csrfmiddlewaretoken]");
   if (meta) return meta.value;
-  const body = document.querySelector('body');
-  return body ? body.dataset.csrf : '';
+  const body = document.querySelector("body");
+  return body ? body.dataset.csrf : "";
 }
 
 function postJson(url, data) {
   return fetch(url, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCsrf(),
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCsrf(),
     },
     body: JSON.stringify(data),
-  }).then(r => r.json());
+  }).then((r) => r.json());
 }
 
 function postForm(url, formData) {
-  formData.append('csrfmiddlewaretoken', getCsrf());
-  return fetch(url, { method: 'POST', body: formData }).then(r => r.json());
+  formData.append("csrfmiddlewaretoken", getCsrf());
+  return fetch(url, { method: "POST", body: formData }).then((r) => r.json());
 }
 
 // ------------------------------------------------------------------ //
@@ -58,8 +64,8 @@ const toast = (() => {
 
   function getEl() {
     if (!el) {
-      el = document.createElement('div');
-      el.className = 'toast';
+      el = document.createElement("div");
+      el.className = "toast";
       document.body.appendChild(el);
     }
     return el;
@@ -69,10 +75,10 @@ const toast = (() => {
     show(msg, duration = 3000) {
       const t = getEl();
       t.textContent = msg;
-      t.classList.add('show');
+      t.classList.add("show");
       clearTimeout(timer);
-      timer = setTimeout(() => t.classList.remove('show'), duration);
-    }
+      timer = setTimeout(() => t.classList.remove("show"), duration);
+    },
   };
 })();
 
@@ -80,21 +86,21 @@ const toast = (() => {
 // Sidebar toggle
 // ------------------------------------------------------------------ //
 
-document.addEventListener('DOMContentLoaded', () => {
-  const toggle = document.getElementById('sidebar-toggle');
-  const shell = document.querySelector('.cms-shell');
-  const sidebar = document.querySelector('.sidebar');
+document.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.getElementById("sidebar-toggle");
+  const shell = document.querySelector(".cms-shell");
+  const sidebar = document.querySelector(".sidebar");
 
   if (toggle && shell) {
-    toggle.addEventListener('click', () => {
-      const isCollapsed = sidebar.classList.toggle('collapsed');
-      shell.classList.toggle('sidebar-collapsed', isCollapsed);
-      localStorage.setItem('cms_sidebar', isCollapsed ? '0' : '1');
+    toggle.addEventListener("click", () => {
+      const isCollapsed = sidebar.classList.toggle("collapsed");
+      shell.classList.toggle("sidebar-collapsed", isCollapsed);
+      localStorage.setItem("cms_sidebar", isCollapsed ? "0" : "1");
     });
 
-    if (localStorage.getItem('cms_sidebar') === '0') {
-      sidebar.classList.add('collapsed');
-      shell.classList.add('sidebar-collapsed');
+    if (localStorage.getItem("cms_sidebar") === "0") {
+      sidebar.classList.add("collapsed");
+      shell.classList.add("sidebar-collapsed");
     }
   }
 });
@@ -103,11 +109,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // Auto-dismiss messages
 // ------------------------------------------------------------------ //
 
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.message').forEach(msg => {
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".message").forEach((msg) => {
     setTimeout(() => {
-      msg.style.transition = 'opacity .4s';
-      msg.style.opacity = '0';
+      msg.style.transition = "opacity .4s";
+      msg.style.opacity = "0";
       setTimeout(() => msg.remove(), 400);
     }, 4000);
   });
@@ -119,22 +125,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initToggles() {
   // Use event delegation so toggles re-added by DataTables drawCallback work
-  document.querySelectorAll('[data-toggle-url]').forEach(wrap => {
+  document.querySelectorAll("[data-toggle-url]").forEach((wrap) => {
     // Avoid double-binding by checking for a flag
     if (wrap.dataset.toggleBound) return;
-    wrap.dataset.toggleBound = '1';
+    wrap.dataset.toggleBound = "1";
 
-    wrap.addEventListener('click', async () => {
+    wrap.addEventListener("click", async () => {
       const url = wrap.dataset.toggleUrl;
-      const sw = wrap.querySelector('.toggle-switch');
+      const sw = wrap.querySelector(".toggle-switch");
       try {
         const res = await postJson(url, {});
         if (res.status !== undefined) {
-          sw.classList.toggle('on', res.status);
-          toast.show(res.message || 'Status updated');
+          sw.classList.toggle("on", res.status);
+          toast.show(res.message || "Status updated");
         }
       } catch (e) {
-        toast.show('Error updating status');
+        toast.show("Error updating status");
       }
     });
   });
@@ -145,29 +151,29 @@ function initToggles() {
 // ------------------------------------------------------------------ //
 
 function openDeleteModal(url, label) {
-  const overlay = document.getElementById('delete-modal');
-  const text = document.getElementById('delete-modal-text');
-  const form = document.getElementById('delete-form');
+  const overlay = document.getElementById("delete-modal");
+  const text = document.getElementById("delete-modal-text");
+  const form = document.getElementById("delete-form");
 
   if (!overlay) return;
 
   text.textContent = label
     ? `Are you sure you want to delete "${label}"? This cannot be undone.`
-    : 'Are you sure? This cannot be undone.';
+    : "Are you sure? This cannot be undone.";
 
   form.action = url;
-  overlay.classList.add('open');
+  overlay.classList.add("open");
 }
 
 function closeDeleteModal() {
-  const overlay = document.getElementById('delete-modal');
-  if (overlay) overlay.classList.remove('open');
+  const overlay = document.getElementById("delete-modal");
+  if (overlay) overlay.classList.remove("open");
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const overlay = document.getElementById('delete-modal');
+document.addEventListener("DOMContentLoaded", () => {
+  const overlay = document.getElementById("delete-modal");
   if (overlay) {
-    overlay.addEventListener('click', e => {
+    overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeDeleteModal();
     });
   }
@@ -178,27 +184,30 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------------------------------ //
 
 function initBulk() {
-  const selectAll = document.getElementById('select-all');
+  const selectAll = document.getElementById("select-all");
   if (!selectAll) return;
 
-  selectAll.addEventListener('change', () => {
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
+  selectAll.addEventListener("change", () => {
+    document.querySelectorAll(".row-checkbox").forEach((cb) => {
       cb.checked = selectAll.checked;
     });
   });
 }
 
 async function bulkAction(modelKey, action) {
-  const checked = [...document.querySelectorAll('.row-checkbox:checked')];
-  if (!checked.length) { toast.show('No items selected'); return; }
+  const checked = [...document.querySelectorAll(".row-checkbox:checked")];
+  if (!checked.length) {
+    toast.show("No items selected");
+    return;
+  }
 
-  if (action === 'delete') {
+  if (action === "delete") {
     openDeleteModal(null, `${checked.length} selected item(s)`);
-    const form = document.getElementById('delete-form');
+    const form = document.getElementById("delete-form");
     form.onsubmit = async (e) => {
       e.preventDefault();
       closeDeleteModal();
-      await executeBulkAction(modelKey, 'delete', checked);
+      await executeBulkAction(modelKey, "delete", checked);
     };
     return;
   }
@@ -208,19 +217,19 @@ async function bulkAction(modelKey, action) {
 
 async function executeBulkAction(modelKey, action, checked) {
   const fd = new FormData();
-  fd.append('action', action);
-  checked.forEach(cb => fd.append('selected_ids', cb.value));
+  fd.append("action", action);
+  checked.forEach((cb) => fd.append("selected_ids", cb.value));
 
   try {
-    const res = await postForm(`/core/bulk/${modelKey}/`, fd);
+    const res = await postForm(`/apanel/core/bulk/${modelKey}/`, fd);
     if (res.success) {
       toast.show(res.message);
       setTimeout(() => location.reload(), 800);
     } else {
-      toast.show(res.error || 'Action failed');
+      toast.show(res.error || "Action failed");
     }
   } catch (e) {
-    toast.show('Server error');
+    toast.show("Server error");
   }
 }
 
@@ -233,16 +242,18 @@ async function executeBulkAction(modelKey, action, checked) {
 const _dtInstances = new WeakMap();
 
 function initAllDataTables() {
-  const dtConstructor = window.DataTable || (window.jQuery && window.jQuery.fn.DataTable);
+  const dtConstructor =
+    window.DataTable || (window.jQuery && window.jQuery.fn.DataTable);
   if (!dtConstructor) {
-    console.warn('CMS: DataTables not loaded (constructor not found).');
+    console.warn("CMS: DataTables not loaded (constructor not found).");
     return;
   }
 
-  document.querySelectorAll('.cms-table').forEach(tableEl => {
-    if (_dtInstances.has(tableEl) || tableEl.classList.contains('no-datatable')) return;
+  document.querySelectorAll(".cms-table").forEach((tableEl) => {
+    if (_dtInstances.has(tableEl) || tableEl.classList.contains("no-datatable"))
+      return;
 
-    const isSortable = !!tableEl.querySelector('tbody[data-sortable]');
+    const isSortable = !!tableEl.querySelector("tbody[data-sortable]");
 
     try {
       // Use jQuery constructor if available, otherwise window.DataTable
@@ -255,42 +266,44 @@ function initAllDataTables() {
         columnDefs: [
           { targets: 0, orderable: false },
           { targets: 1, orderable: false },
-          { targets: 'no-sort', orderable: false },
+          { targets: "no-sort", orderable: false },
           { targets: -1, orderable: !isSortable },
         ],
         language: {
-          search: '',
-          searchPlaceholder: 'Search...',
-          info: '_START_–_END_ of _TOTAL_',
-          infoEmpty: '0 items',
+          search: "",
+          searchPlaceholder: "Search...",
+          info: "_START_–_END_ of _TOTAL_",
+          infoEmpty: "0 items",
           paginate: {
-            previous: '‹',
-            next: '›',
+            previous: "‹",
+            next: "›",
           },
         },
         layout: {
-          topStart: 'pageLength',
-          topEnd: 'search',
-          bottomStart: '',
-          bottomEnd: 'paging'
+          topStart: "pageLength",
+          topEnd: "search",
+          bottomStart: "",
+          bottomEnd: "paging",
         },
         drawCallback: function () {
           initToggles();
         },
       };
 
-      const dtInstance = $table ? $table.DataTable(options) : new dtConstructor(tableEl, options);
+      const dtInstance = $table
+        ? $table.DataTable(options)
+        : new dtConstructor(tableEl, options);
 
       // store the instance
       _dtInstances.set(tableEl, dtInstance);
     } catch (err) {
-      console.error('CMS: DataTable init error on', tableEl, err);
+      console.error("CMS: DataTable init error on", tableEl, err);
     }
   });
 
   // style search inputs
-  document.querySelectorAll('.dt-search input').forEach(input => {
-    input.classList.add('form-control');
+  document.querySelectorAll(".dt-search input").forEach((input) => {
+    input.classList.add("form-control");
   });
 }
 
@@ -308,31 +321,33 @@ function initAllDataTables() {
 // ------------------------------------------------------------------ //
 
 function initSortable(modelKey) {
-  const tbody = document.querySelector('tbody[data-sortable]');
-  if (!tbody || typeof Sortable === 'undefined') return;
+  const tbody = document.querySelector("tbody[data-sortable]");
+  if (!tbody || typeof Sortable === "undefined") return;
 
   Sortable.create(tbody, {
-    handle: '.drag-handle',
+    handle: ".drag-handle",
     animation: 150,
-    ghostClass: 'sortable-ghost',
+    ghostClass: "sortable-ghost",
 
     onEnd: async () => {
       // Collect the new order from the DOM (what SortableJS just produced)
-      const order = [...tbody.querySelectorAll('tr[data-id]')].map(r => r.dataset.id);
+      const order = [...tbody.querySelectorAll("tr[data-id]")].map(
+        (r) => r.dataset.id,
+      );
 
       try {
-        const res = await postJson(`/core/sort/${modelKey}/`, { order });
+        const res = await postJson(`/apanel/core/sort/${modelKey}/`, { order });
         if (res.success) {
-          toast.show('Order saved');
+          toast.show("Order saved");
           // Reload so DataTables re-initialises with the new server order.
           // Without this, DataTables internal index is out of sync with the DOM
           // and paging/search will show rows in the wrong order.
           setTimeout(() => location.reload(), 600);
         } else {
-          toast.show('Failed to save order');
+          toast.show("Failed to save order");
         }
       } catch (e) {
-        toast.show('Failed to save order');
+        toast.show("Failed to save order");
       }
     },
   });
@@ -343,43 +358,45 @@ function initSortable(modelKey) {
 // ------------------------------------------------------------------ //
 
 function initImagePreview() {
-  const imageFields = ['image', 'banner_image', 'avatar'];
+  const imageFields = ["image", "banner_image", "avatar"];
 
-  imageFields.forEach(fieldName => {
-    const imageInput = document.querySelector(`input[type="file"][name="${fieldName}"]`);
+  imageFields.forEach((fieldName) => {
+    const imageInput = document.querySelector(
+      `input[type="file"][name="${fieldName}"]`,
+    );
     if (!imageInput) return;
 
     // Skip fields managed by MediaPickerWidget
-    if (imageInput.closest('.media-picker')) return;
+    if (imageInput.closest(".media-picker")) return;
 
-    let previewId = fieldName + 'Preview';
+    let previewId = fieldName + "Preview";
     let imagePreview = document.getElementById(previewId);
 
     if (!imagePreview) {
-      imagePreview = document.createElement('div');
+      imagePreview = document.createElement("div");
       imagePreview.id = previewId;
       imageInput.parentNode.insertBefore(imagePreview, imageInput.nextSibling);
     }
 
-    imageInput.addEventListener('change', () => {
+    imageInput.addEventListener("change", () => {
       const file = imageInput.files[0];
       if (!file) return;
 
       if (file.size > CONFIG.images.maxSize) {
-        toast.show('Image too large — max 2 MB');
-        imageInput.value = '';
+        toast.show("Image too large — max 2 MB");
+        imageInput.value = "";
         return;
       }
 
-      const ext = file.name.split('.').pop().toLowerCase();
+      const ext = file.name.split(".").pop().toLowerCase();
       if (!CONFIG.images.allowedExtensions.includes(ext)) {
         toast.show(`Invalid file type .${ext}`);
-        imageInput.value = '';
+        imageInput.value = "";
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = e => {
+      reader.onload = (e) => {
         imagePreview.innerHTML = `<img src="${e.target.result}"
           style="max-width:200px; max-height:140px; margin-top:8px;
                  border-radius:6px; border:1px solid var(--border);">`;
@@ -394,14 +411,14 @@ function initImagePreview() {
 // ------------------------------------------------------------------ //
 
 function initSEOToggle() {
-  const toggle = document.getElementById('seo-toggle');
-  const panel = document.getElementById('seo-panel');
+  const toggle = document.getElementById("seo-toggle");
+  const panel = document.getElementById("seo-panel");
   if (!toggle || !panel) return;
 
-  toggle.addEventListener('click', () => {
-    const open = panel.style.display !== 'none';
-    panel.style.display = open ? 'none' : 'block';
-    toggle.textContent = open ? '▸ SEO / Meta' : '▾ SEO / Meta';
+  toggle.addEventListener("click", () => {
+    const open = panel.style.display !== "none";
+    panel.style.display = open ? "none" : "block";
+    toggle.textContent = open ? "▸ SEO / Meta" : "▾ SEO / Meta";
   });
 }
 
@@ -410,59 +427,63 @@ function initSEOToggle() {
 // ------------------------------------------------------------------ //
 
 function initSlugCheck(modelName, objectId) {
-  const slugInput = document.getElementById('id_slug');
-  const titleInput = document.getElementById('id_title');
-  const slugMessage = document.getElementById('slug-status');
+  const slugInput = document.getElementById("id_slug");
+  const titleInput = document.getElementById("id_title");
+  const slugMessage = document.getElementById("slug-status");
   if (!slugInput) return;
 
   let debounceTimer;
   let slugManuallyEdited = false;
 
   function slugify(text) {
-    return text.toString().toLowerCase()
+    return text
+      .toString()
+      .toLowerCase()
       .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^\w\-]+/g, '')
-      .replace(/--+/g, '-')
-      .replace(/^-+/, '')
-      .replace(/-+$/, '')
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/--+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "")
       .substring(0, 80);
   }
 
   function checkSlug(slug) {
     if (!slug) {
-      if (slugMessage) { slugMessage.textContent = ''; }
+      if (slugMessage) {
+        slugMessage.textContent = "";
+      }
       return;
     }
     const params = new URLSearchParams({ slug });
-    if (objectId) params.append('exclude_id', objectId);
+    if (objectId) params.append("exclude_id", objectId);
 
-    fetch(`/core/slug/${modelName}/?${params}`)
-      .then(r => r.json())
-      .then(data => {
+    fetch(`/apanel/core/slug/${modelName}/?${params}`)
+      .then((r) => r.json())
+      .then((data) => {
         if (!slugMessage) return;
         if (data.error) {
           slugMessage.textContent = `⚠ ${data.error}`;
-          slugMessage.style.color = '#f59e0b';
+          slugMessage.style.color = "#f59e0b";
         } else if (!data.available) {
-          slugMessage.textContent = '✗ Slug already in use';
-          slugMessage.style.color = '#dc2626';
+          slugMessage.textContent = "✗ Slug already in use";
+          slugMessage.style.color = "#dc2626";
         } else {
-          slugMessage.textContent = '✓ Available';
-          slugMessage.style.color = '#16a34a';
+          slugMessage.textContent = "✓ Available";
+          slugMessage.style.color = "#16a34a";
         }
       })
-      .catch(() => { });
+      .catch(() => {});
   }
 
-  slugInput.addEventListener('input', () => {
+  slugInput.addEventListener("input", () => {
     slugManuallyEdited = true;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => checkSlug(slugInput.value.trim()), 400);
   });
 
   if (titleInput) {
-    titleInput.addEventListener('input', () => {
+    titleInput.addEventListener("input", () => {
       if (slugManuallyEdited) return;
       slugInput.value = slugify(titleInput.value);
       clearTimeout(debounceTimer);
@@ -470,7 +491,7 @@ function initSlugCheck(modelName, objectId) {
     });
   }
 
-  slugInput.addEventListener('blur', () => checkSlug(slugInput.value.trim()));
+  slugInput.addEventListener("blur", () => checkSlug(slugInput.value.trim()));
 }
 
 // ------------------------------------------------------------------ //
@@ -478,21 +499,21 @@ function initSlugCheck(modelName, objectId) {
 // ------------------------------------------------------------------ //
 
 function initCharCounters() {
-  Object.keys(CONFIG.limits).forEach(fieldId => {
+  Object.keys(CONFIG.limits).forEach((fieldId) => {
     const input = document.getElementById(fieldId);
     if (!input) return;
 
-    let counterId = fieldId + '-counter';
+    let counterId = fieldId + "-counter";
     let counter = document.getElementById(counterId);
     if (!counter) {
-      counter = document.createElement('div');
+      counter = document.createElement("div");
       counter.id = counterId;
-      counter.style.cssText = 'font-size:12px; margin-top:4px;';
+      counter.style.cssText = "font-size:12px; margin-top:4px;";
       input.parentNode.insertBefore(counter, input.nextSibling);
     }
 
     const max = CONFIG.limits[fieldId];
-    const min = fieldId === 'id_meta_title' ? 20 : 0;
+    const min = fieldId === "id_meta_title" ? 20 : 0;
 
     function update() {
       const len = input.value.length;
@@ -500,26 +521,26 @@ function initCharCounters() {
 
       if (len > max) {
         input.value = input.value.substring(0, max);
-        counter.textContent = 'Limit reached';
-        counter.style.color = '#dc2626';
+        counter.textContent = "Limit reached";
+        counter.style.color = "#dc2626";
         return;
       }
       if (min && len > 0 && len < min) {
         counter.textContent = `At least ${min} characters required`;
-        counter.style.color = '#dc2626';
+        counter.style.color = "#dc2626";
       } else if (remaining === 0) {
-        counter.textContent = 'Limit reached';
-        counter.style.color = '#dc2626';
+        counter.textContent = "Limit reached";
+        counter.style.color = "#dc2626";
       } else if (remaining <= 10) {
         counter.textContent = `${remaining} characters remaining`;
-        counter.style.color = '#f59e0b';
+        counter.style.color = "#f59e0b";
       } else {
         counter.textContent = `${remaining} characters remaining`;
-        counter.style.color = '#6b7280';
+        counter.style.color = "#6b7280";
       }
     }
 
-    input.addEventListener('input', update);
+    input.addEventListener("input", update);
     update();
   });
 }
@@ -528,9 +549,7 @@ function initCharCounters() {
 // Bootstrap — run everything on DOMContentLoaded
 // ------------------------------------------------------------------ //
 
-
-
-window.addEventListener('load', () => {
+window.addEventListener("load", () => {
   initToggles();
   initBulk();
   initImagePreview();

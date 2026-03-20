@@ -1,158 +1,176 @@
-from pathlib import Path
 # Forcing server reload for admin registration
 import os
-
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 DEBUG = False  # Overridden to True in development.py
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get("SECRET_KEY")
 
 INSTALLED_APPS = [
     # Django core
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.forms',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.forms",
     # Third party
-    'rest_framework',
-    'corsheaders',
+    "rest_framework",
+    "corsheaders",
     # CMS apps
-    'apps.core',
-    'apps.accounts',
-    'apps.media',
-    'apps.articles',
-    'apps.blog',
-    'apps.packages',
-    'apps.testimonials',
-    'apps.social',
-    'apps.nearby',
-    'apps.faq',
-    'api',
-
+    "apps.core",
+    "apps.accounts",
+    "apps.media",
+    "apps.articles",
+    "apps.blog",
+    "apps.packages",
+    "apps.testimonials",
+    "apps.social",
+    "apps.nearby",
+    "apps.faq",
+    "api",
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'config.urls'
-AUTH_USER_MODEL = 'accounts.User'
+ROOT_URLCONF = "config.urls"
+AUTH_USER_MODEL = "accounts.User"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'apps.core.context_processors.cms_context',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "apps.core.context_processors.cms_context",
             ],
         },
     },
 ]
 
-FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
+FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = "config.wsgi.application"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = "/apanel/login/"
+LOGIN_REDIRECT_URL = "/apanel/"
+LOGOUT_REDIRECT_URL = "/apanel/login/"
 
 from django.contrib.messages import constants as messages
+
 MESSAGE_TAGS = {
-    messages.DEBUG:   'debug',
-    messages.INFO:    'info',
-    messages.SUCCESS: 'success',
-    messages.WARNING: 'warning',
-    messages.ERROR:   'error',
+    messages.DEBUG: "debug",
+    messages.INFO: "info",
+    messages.SUCCESS: "success",
+    messages.WARNING: "warning",
+    messages.ERROR: "error",
 }
 
 # Image validation settings
-IMAGE_MAX_FILE_SIZE = 2 * 1024 * 1024       # 2MB
+IMAGE_MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
 IMAGE_MAX_DIMENSIONS = (1920, 1280)
-IMAGE_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+IMAGE_ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 
 # Media upload settings (all file types)
-MEDIA_MAX_FILE_SIZE = 10 * 1024 * 1024      # 10MB
+MEDIA_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MEDIA_ALLOWED_EXTENSIONS = [
     # Images
-    'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico',
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "svg",
+    "bmp",
+    "ico",
     # Videos
-    'mp4', 'mov', 'avi', 'mkv', 'webm',
+    "mp4",
+    "mov",
+    "avi",
+    "mkv",
+    "webm",
     # Documents
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'zip',
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "txt",
+    "csv",
+    "zip",
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '120/minute',
-        'user': '300/minute',
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "120/minute",
+        "user": "300/minute",
     },
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
 }
 
 
-
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {'format': '{levelname} {asctime} {module} {message}', 'style': '{'},
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {"format": "{levelname} {asctime} {module} {message}", "style": "{"},
     },
-    'handlers': {
-        'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
     },
-    'root': {'handlers': ['console'], 'level': 'INFO'},
-    'loggers': {
-        'cms.audit': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "cms.audit": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }

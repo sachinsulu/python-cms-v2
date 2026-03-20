@@ -6,15 +6,19 @@ User = get_user_model()
 
 
 class LoginForm(forms.Form):
-    username = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Username', 'autofocus': True}))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password'}))
+    username = forms.CharField(
+        widget=forms.TextInput(attrs={"placeholder": "Username", "autofocus": True})
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={"placeholder": "Password"})
+    )
 
 
 class UserCreateForm(forms.ModelForm):
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'placeholder': 'Password'}),
+        widget=forms.PasswordInput(attrs={"placeholder": "Password"}),
         required=False,
-        help_text='Leave blank to keep existing password (when editing).'
+        help_text="Leave blank to keep existing password (when editing).",
     )
     groups = forms.ModelMultipleChoiceField(
         queryset=Group.objects.all(),
@@ -23,29 +27,33 @@ class UserCreateForm(forms.ModelForm):
     )
 
     class Meta:
-        model  = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'is_active', 'groups']
+        model = User
+        fields = ["username", "email", "first_name", "last_name", "is_active", "groups"]
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        pwd  = self.cleaned_data.get('password')
+        pwd = self.cleaned_data.get("password")
         if pwd:
             user.set_password(pwd)
         if commit:
             user.save()
-            user.groups.set(self.cleaned_data['groups'])
+            user.groups.set(self.cleaned_data["groups"])
         return user
 
 
 class GroupForm(forms.ModelForm):
     permissions = forms.ModelMultipleChoiceField(
-        queryset=Permission.objects.exclude(
-            content_type__app_label__in=['admin', 'contenttypes', 'sessions']
-        ).select_related('content_type'),
-        widget=forms.CheckboxSelectMultiple,
-        required=False,
+        queryset=Permission.objects.none(),  # populated in __init__ to avoid
+        widget=forms.CheckboxSelectMultiple,  # OperationalError at import time
+        required=False,  # (DB may not exist yet)
     )
 
     class Meta:
-        model  = Group
-        fields = ['name', 'permissions']
+        model = Group
+        fields = ["name", "permissions"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["permissions"].queryset = Permission.objects.exclude(
+            content_type__app_label__in=["admin", "contenttypes", "sessions"]
+        ).select_related("content_type")

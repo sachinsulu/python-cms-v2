@@ -1,11 +1,16 @@
-from django.db import models, transaction
-from django.db.models import Max
 from django.conf import settings
-from django.utils.text import slugify
+from django.db import models, transaction
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.utils.text import slugify
 
-from .mixins_models import TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin
+from .mixins_models import (
+    ActiveMixin,
+    SEOMixin,
+    SlugMixin,
+    SortableMixin,
+    TimestampMixin,
+)
 
 
 class GlobalSlug(models.Model):
@@ -19,25 +24,28 @@ class GlobalSlug(models.Model):
     Maintained automatically by BaseContentModel.save() and .delete().
     Never write to this table directly from application code.
     """
-    slug       = models.SlugField(primary_key=True, max_length=255)
+
+    slug = models.SlugField(primary_key=True, max_length=255)
     model_name = models.CharField(max_length=100)
-    object_id  = models.PositiveIntegerField()
+    object_id = models.PositiveIntegerField()
 
     class Meta:
-        verbose_name        = 'Global Slug'
-        verbose_name_plural = 'Global Slugs'
+        verbose_name = "Global Slug"
+        verbose_name_plural = "Global Slugs"
         indexes = [
             models.Index(
-                fields=['model_name', 'object_id'],
-                name='core_globalslug_model_obj_idx',
+                fields=["model_name", "object_id"],
+                name="core_globalslug_model_obj_idx",
             ),
         ]
 
     def __str__(self):
-        return f'{self.slug} → {self.model_name}:{self.object_id}'
+        return f"{self.slug} → {self.model_name}:{self.object_id}"
 
 
-class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin, models.Model):
+class BaseContentModel(
+    TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SEOMixin, models.Model
+):
     """
     Abstract base for all CMS content types.
 
@@ -66,21 +74,16 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
     clean() is intentionally absent — slug validation belongs in the
     form layer, not the model layer.
     """
+
     title = models.CharField(max_length=255)
 
     class Meta:
         abstract = True
-        ordering = ['position']
+        ordering = ["position"]
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            if not self.pk:
-                last = (
-                    self.__class__.objects
-                    .select_for_update()
-                    .aggregate(Max('position'))['position__max']
-                )
-                self.position = (last or 0) + 1
+            self._assign_position()
 
             if not self.slug:
                 self.slug = slugify(self.title, allow_unicode=True)
@@ -88,7 +91,7 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
             old_slug = None
             if self.pk:
                 try:
-                    old_slug = self.__class__.objects.only('slug').get(pk=self.pk).slug
+                    old_slug = self.__class__.objects.only("slug").get(pk=self.pk).slug
                 except self.__class__.DoesNotExist:
                     pass
 
@@ -102,8 +105,8 @@ class BaseContentModel(TimestampMixin, ActiveMixin, SortableMixin, SlugMixin, SE
             GlobalSlug.objects.update_or_create(
                 slug=self.slug,
                 defaults={
-                    'model_name': self.__class__.__name__,
-                    'object_id':  self.pk,
+                    "model_name": self.__class__.__name__,
+                    "object_id": self.pk,
                 },
             )
 
@@ -120,21 +123,16 @@ class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Mode
     Lightweight base for CMS models that don't need SEO or slugs.
     No GlobalSlug involvement — these models carry no slug field.
     """
+
     title = models.CharField(max_length=255)
 
     class Meta:
         abstract = True
-        ordering = ['position']
+        ordering = ["position"]
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            if not self.pk:
-                last = (
-                    self.__class__.objects
-                    .select_for_update()
-                    .aggregate(Max('position'))['position__max']
-                )
-                self.position = (last or 0) + 1
+            self._assign_position()
             super().save(*args, **kwargs)
 
     def __str__(self):
@@ -145,48 +143,50 @@ class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Mode
 # Audit Log
 # ------------------------------------------------------------------ #
 
+
 class AuditLog(models.Model):
-    CREATE      = 'create'
-    UPDATE      = 'update'
-    DELETE      = 'delete'
-    BULK_DELETE = 'bulk_delete'
-    TOGGLE      = 'toggle'
-    BULK_TOGGLE = 'bulk_toggle'
-    REORDER     = 'reorder'
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+    BULK_DELETE = "bulk_delete"
+    TOGGLE = "toggle"
+    BULK_TOGGLE = "bulk_toggle"
+    REORDER = "reorder"
 
     ACTION_CHOICES = [
-        (CREATE,      'Create'),
-        (UPDATE,      'Update'),
-        (DELETE,      'Delete'),
-        (BULK_DELETE, 'Bulk Delete'),
-        (TOGGLE,      'Toggle Status'),
-        (BULK_TOGGLE, 'Bulk Toggle'),
-        (REORDER,     'Reorder'),
+        (CREATE, "Create"),
+        (UPDATE, "Update"),
+        (DELETE, "Delete"),
+        (BULK_DELETE, "Bulk Delete"),
+        (TOGGLE, "Toggle Status"),
+        (BULK_TOGGLE, "Bulk Toggle"),
+        (REORDER, "Reorder"),
     ]
 
-    user        = models.ForeignKey(
-                      settings.AUTH_USER_MODEL,
-                      null=True, blank=True,
-                      on_delete=models.SET_NULL,
-                      related_name='audit_logs',
-                  )
-    action      = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    model_name  = models.CharField(max_length=100, db_index=True)
-    object_id   = models.CharField(max_length=100)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="audit_logs",
+    )
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    model_name = models.CharField(max_length=100, db_index=True)
+    object_id = models.CharField(max_length=100)
     object_repr = models.CharField(max_length=255)
-    changes     = models.JSONField(default=dict)
-    ip_address  = models.GenericIPAddressField(null=True, blank=True)
-    timestamp   = models.DateTimeField(auto_now_add=True)
+    changes = models.JSONField(default=dict)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-timestamp']
-        indexes  = [
-            models.Index(fields=['model_name', 'object_id']),
-            models.Index(fields=['user', 'timestamp']),
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["model_name", "object_id"]),
+            models.Index(fields=["user", "timestamp"]),
         ]
 
     def __str__(self):
-        user = self.user.username if self.user else 'system'
+        user = self.user.username if self.user else "system"
         return f"[{self.timestamp:%Y-%m-%d %H:%M}] {user} {self.action} {self.model_name}:{self.object_id}"
 
 
@@ -197,5 +197,9 @@ def remove_global_slug_on_delete(sender, instance, **kwargs):
     instance is deleted. This catches QuerySet.delete() (bulk deletes)
     as well as regular instance.delete().
     """
-    if isinstance(instance, BaseContentModel) and hasattr(instance, 'slug') and instance.slug:
+    if (
+        isinstance(instance, BaseContentModel)
+        and hasattr(instance, "slug")
+        and instance.slug
+    ):
         GlobalSlug.objects.filter(slug=instance.slug).delete()
