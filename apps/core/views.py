@@ -49,7 +49,7 @@ def redirect_back(request, default="/"):
 def check_perm(request, model_class, action="change") -> bool:
     if request.user.is_superuser:
         return True
-    app = model_class._meta.app_label
+    app   = model_class._meta.app_label
     model = model_class._meta.model_name
     return request.user.has_perm(f"{app}.{action}_{model}")
 
@@ -74,13 +74,13 @@ class HomepageView(View):
 @method_decorator(login_required, name="dispatch")
 class DashboardView(View):
     def get(self, request):
-        user = request.user
+        user    = request.user
         version = cache.get("dashboard_stats_version", 1)
 
-        stats_key = f"dashboard_stats_{user.pk}_v{version}"
+        stats_key  = f"dashboard_stats_{user.pk}_v{version}"
         recent_key = f"dashboard_recent_{user.pk}_v{version}"
 
-        stats = cache.get(stats_key)
+        stats  = cache.get(stats_key)
         recent = cache.get(recent_key)
 
         if not stats:
@@ -95,7 +95,7 @@ class DashboardView(View):
             request,
             "dashboard.html",
             {
-                "stats": stats,
+                "stats":          stats,
                 "recent_modules": recent,
             },
         )
@@ -136,7 +136,6 @@ def toggle_status(request, model_key, pk):
     if not config:
         return JsonResponse({"error": "Invalid model"}, status=400)
 
-    # ADD THIS GUARD
     if not config.active_field:
         return JsonResponse(
             {"error": "This model does not support toggling"}, status=400
@@ -145,8 +144,8 @@ def toggle_status(request, model_key, pk):
     if not check_perm(request, config.model, "change"):
         return JsonResponse({"error": "Permission denied"}, status=403)
 
-    obj = get_object_or_404(config.model, pk=pk)
-    field = config.active_field
+    obj     = get_object_or_404(config.model, pk=pk)
+    field   = config.active_field
     current = getattr(obj, field)
     setattr(obj, field, not current)
     obj.save(update_fields=[field])
@@ -171,21 +170,22 @@ def delete_object(request, model_key, pk):
     if not check_perm(request, config.model, "delete"):
         return JsonResponse({"error": "Permission denied"}, status=403)
 
-    obj = get_object_or_404(config.model, pk=pk)
+    obj      = get_object_or_404(config.model, pk=pk)
     obj_repr = str(obj)
-    obj_id = str(obj.pk)
+    obj_id   = str(obj.pk)
     obj.delete()
     invalidate_dashboard_cache()
 
-    # Log manually since the obj is gone
+    # GlobalSlug cleanup is handled by the post_delete signal receiver in
+    # apps/core/models.py — no duplication needed here.
     AuditLog.objects.create(
-        user=request.user,
-        action=AuditLog.DELETE,
-        model_name=config.model.__name__,
-        object_id=obj_id,
-        object_repr=obj_repr,
-        ip_address=get_client_ip(request),
-        changes={},
+        user        = request.user,
+        action      = AuditLog.DELETE,
+        model_name  = config.model.__name__,
+        object_id   = obj_id,
+        object_repr = obj_repr,
+        ip_address  = get_client_ip(request),
+        changes     = {},
     )
 
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -202,7 +202,7 @@ def bulk_action(request, model_key):
     if not config or not config.supports_bulk:
         return JsonResponse({"error": "Invalid model"}, status=400)
 
-    action = request.POST.get("action")
+    action       = request.POST.get("action")
     selected_ids = request.POST.getlist("selected_ids")
 
     if not selected_ids:
@@ -220,17 +220,16 @@ def bulk_action(request, model_key):
     if action == "toggle":
         field = config.active_field
 
-        # ADD THIS GUARD (pairs with Fix 1)
         if not field:
             return JsonResponse(
                 {"error": "This model does not support toggling"}, status=400
             )
 
-        count = qs.count()  # ← count BEFORE update
+        count = qs.count()  # count BEFORE update
         qs.update(
             **{
                 field: Case(
-                    When(**{field: True}, then=Value(False)),
+                    When(**{field: True},  then=Value(False)),
                     When(**{field: False}, then=Value(True)),
                     output_field=BooleanField(),
                 )
@@ -263,18 +262,65 @@ def update_order(request, model_key):
         return JsonResponse({"error": "Permission denied"}, status=403)
 
     try:
-        data = json.loads(request.body)
+        data  = json.loads(request.body)
         order = [int(i) for i in data.get("order", [])]
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "Invalid data"}, status=400)
 
+    if not order:
+        return JsonResponse({"error": "Empty order list"}, status=400)
+
     with transaction.atomic():
-        objs = (
-            config.model.objects.select_for_update()
+        qs = (
+            config.model.objects
+            .select_for_update()
             .filter(pk__in=order)
             .only("pk", "position")
         )
-        obj_map = {obj.pk: obj for obj in objs}
+
+        # ------------------------------------------------------------------ #
+        # Parent-scoped ordering guard (Phase 3.4)
+        #
+        # Problem:
+        #   Without scoping, a payload containing PKs from different parent
+        #   objects (e.g. sub-packages from two different packages) would
+        #   silently reassign positions across those parents, corrupting their
+        #   independent sort orders.
+        #
+        # Fix:
+        #   If CMSModelConfig.parent_field is set, resolve the parent FK value
+        #   from the first item in the payload, then restrict the queryset to
+        #   objects sharing that same parent. Any PKs belonging to a different
+        #   parent are simply excluded — they are neither modified nor cause an
+        #   error, consistent with how unknown PKs are already handled (silently
+        #   skipped via the obj_map lookup below).
+        #
+        #   For all models where parent_field is None (every model except
+        #   SubPackage), this block is skipped entirely — zero behaviour change.
+        # ------------------------------------------------------------------ #
+        if config.parent_field:
+            first_pk = order[0]
+            try:
+                first_obj = config.model.objects.only(
+                    config.parent_field
+                ).get(pk=first_pk)
+            except config.model.DoesNotExist:
+                return JsonResponse({"error": "Invalid order data"}, status=400)
+
+            parent_id = getattr(first_obj, f"{config.parent_field}_id")
+
+            # Re-scope to objects belonging to the detected parent only.
+            qs = (
+                config.model.objects
+                .select_for_update()
+                .filter(
+                    pk__in=order,
+                    **{f"{config.parent_field}_id": parent_id},
+                )
+                .only("pk", "position")
+            )
+
+        obj_map   = {obj.pk: obj for obj in qs}
         to_update = []
         for position, obj_id in enumerate(order):
             if obj_id in obj_map:
@@ -289,15 +335,14 @@ def update_order(request, model_key):
 @login_required
 @require_GET
 def ajax_check_slug(request, model_key):
-    slug = request.GET.get("slug", "").strip()
+    slug       = request.GET.get("slug", "").strip()
     exclude_id = request.GET.get("exclude_id")
 
     if not slug:
         return JsonResponse({"available": False, "message": "Slug cannot be empty"})
 
-    # Get the exclude object if editing
     exclude_obj = None
-    config = cms_registry.get(model_key)
+    config      = cms_registry.get(model_key)
     if config and exclude_id:
         try:
             exclude_obj = config.model.objects.get(pk=int(exclude_id))
@@ -308,7 +353,7 @@ def ajax_check_slug(request, model_key):
     return JsonResponse(
         {
             "available": not taken,
-            "message": "Slug is available."
+            "message":   "Slug is available."
             if not taken
             else "Slug exists. Please choose another.",
         }

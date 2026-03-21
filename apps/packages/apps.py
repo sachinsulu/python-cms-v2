@@ -20,11 +20,15 @@ class PackagesConfig(AppConfig):
             api_viewset = PackageViewSet,
         ))
         cms_registry.register('subpackage', CMSModelConfig(
-            model       = SubPackage,
-            stat_icon   = 'fa-solid fa-boxes-stacked',
-            stat_color  = 'cyan',
-            stat_perm   = 'packages.view_subpackage',
-            list_url    = None,
-            api_viewset = SubPackageViewSet,
-            show_recent = False,
+            model        = SubPackage,
+            stat_icon    = 'fa-solid fa-boxes-stacked',
+            stat_color   = 'cyan',
+            stat_perm    = 'packages.view_subpackage',
+            list_url     = None,
+            api_viewset  = SubPackageViewSet,
+            show_recent  = False,
+            # parent_field tells update_order in core/views.py to scope
+            # reorder operations to sub-packages of the same Package only,
+            # preventing cross-package position corruption (Phase 3.4).
+            parent_field = 'package',
         ))

@@ -37,25 +37,75 @@ class SortableMixin(models.Model):
         abstract = True
         ordering = ["position"]
 
-    def _assign_position(self):
+    def _assign_position(self, scope_qs=None):
         """
-        Sets position to max(existing) + 1 for new instances.
-        Must be called inside an atomic block (BaseContentModel.save() provides this).
-        Uses select_for_update() to prevent race conditions.
-        No-op when called on an existing instance (self.pk is set).
-        """
-        if not self.pk:
-            from django.db.models import Max
+        Sets position to max(existing_in_scope) + 1 for new instances.
 
-            last = self.__class__.objects.select_for_update().aggregate(
-                Max("position")
-            )["position__max"]
-            self.position = (last or 0) + 1
+        No-op conditions — skips assignment when any of these are true:
+          1. self.pk is set    → existing instance, position already persisted.
+          2. self.position > 0 → caller has already set a specific position
+                                  (used by SubPackage.save() to pass a
+                                  scoped value before delegating to super()).
+
+        Must be called inside an atomic block — BaseContentModel.save() and
+        SimpleContentModel.save() both guarantee this via transaction.atomic().
+
+        Race-condition fix (replaces the previous select_for_update+aggregate):
+        -----------------------------------------------------------------------
+        The original code used:
+            .select_for_update().aggregate(Max("position"))
+
+        select_for_update() on an aggregate does NOT acquire row locks on
+        PostgreSQL because no rows are returned — there is nothing to lock.
+        Two concurrent inserts could both read the same MAX and receive
+        identical positions.
+
+        The fix locks the actual last row:
+            .select_for_update().order_by('-position').first()
+
+        This fetches and holds a row-level lock on a real row. A second
+        concurrent create blocks on that lock until the first transaction
+        commits, then reads the updated maximum, guaranteeing monotonically
+        increasing, non-duplicate positions.
+
+        .only('position') is intentionally omitted: the performance gain is
+        negligible (the row is being locked regardless) and deferred field
+        loading from .only() can cause unexpected extra queries if any
+        downstream code accesses non-deferred attributes on the instance.
+
+        scope_qs parameter:
+        -------------------
+        Pass a pre-filtered QuerySet to constrain the max lookup to a subset
+        of rows. SubPackage.save() passes a queryset filtered to the same
+        parent Package so each package maintains its own independent position
+        counter starting from 1. When None, the full table is used.
+        """
+        if self.pk:
+            # Existing instance — position is already stored in the DB.
+            return
+
+        if self.position > 0:
+            # Caller has explicitly pre-set position before calling save()
+            # (e.g. SubPackage.save() called _assign_position with a scoped
+            # queryset and stored the result in self.position). Trust it.
+            return
+
+        qs = scope_qs if scope_qs is not None else self.__class__.objects
+
+        # Lock the current last row so concurrent inserts serialise here.
+        # .first() returns None when the table / scope is empty → position 1.
+        last = (
+            qs
+            .select_for_update()
+            .order_by('-position')
+            .first()
+        )
+        self.position = (last.position + 1) if last else 1
 
 
 class SlugMixin(models.Model):
-    # db_index omitted — unique=True is enforced per-model via GlobalSlug.slug
-    # (which is a PK and therefore already indexed at the DB level).
+    # db_index omitted — uniqueness is enforced via GlobalSlug.slug (PK),
+    # which is already indexed at the DB level.
     slug = models.SlugField(blank=True)
 
     class Meta:
@@ -65,9 +115,9 @@ class SlugMixin(models.Model):
 class SEOMixin(models.Model):
     """Meta title, description, and keywords for search engines."""
 
-    meta_title = models.CharField(max_length=60, blank=True)
+    meta_title       = models.CharField(max_length=60,  blank=True)
     meta_description = models.TextField(max_length=160, blank=True)
-    meta_keywords = models.CharField(max_length=205, blank=True)
+    meta_keywords    = models.CharField(max_length=205, blank=True)
 
     class Meta:
         abstract = True

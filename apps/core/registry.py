@@ -10,6 +10,18 @@ class CMSModelConfig:
     """
     Configuration for a registered content model.
     Pass this to cms_registry.register() in each app's AppConfig.ready().
+
+    parent_field (optional):
+        Name of the ForeignKey field that scopes instances to a parent object.
+        Example: 'package' on SubPackage.
+
+        When set, the generic update_order view restricts its reorder queryset
+        to objects sharing the same parent as the first item in the payload.
+        This prevents a malicious or accidental payload from reassigning
+        positions across different parent objects.
+
+        Leave as None (the default) for all top-level models — behaviour is
+        identical to before this field was introduced.
     """
 
     def __init__(
@@ -28,19 +40,22 @@ class CMSModelConfig:
         show_recent=True,
         recent_limit=5,
         recent_ordering="-updated_at",
+        # Parent-scoped ordering (e.g. SubPackage → Package)
+        parent_field=None,
     ):
-        self.model = model
-        self.active_field = active_field
-        self.supports_sort = supports_sort
-        self.supports_bulk = supports_bulk
-        self.stat_icon = stat_icon
-        self.stat_color = stat_color
-        self.stat_perm = stat_perm
-        self.list_url = list_url
-        self.api_viewset = api_viewset
-        self.show_recent = show_recent
-        self.recent_limit = recent_limit
+        self.model           = model
+        self.active_field    = active_field
+        self.supports_sort   = supports_sort
+        self.supports_bulk   = supports_bulk
+        self.stat_icon       = stat_icon
+        self.stat_color      = stat_color
+        self.stat_perm       = stat_perm
+        self.list_url        = list_url
+        self.api_viewset     = api_viewset
+        self.show_recent     = show_recent
+        self.recent_limit    = recent_limit
         self.recent_ordering = recent_ordering
+        self.parent_field    = parent_field
 
 
 class CMSRegistry:
@@ -96,10 +111,10 @@ class CMSRegistry:
                     continue
             stats.append(
                 {
-                    "label": key.replace("_", " ").title(),
-                    "count": config.model.objects.count(),
-                    "icon": config.stat_icon,
-                    "color": config.stat_color,
+                    "label":    key.replace("_", " ").title(),
+                    "count":    config.model.objects.count(),
+                    "icon":     config.stat_icon,
+                    "color":    config.stat_color,
                     "list_url": config.list_url,
                 }
             )
@@ -131,14 +146,14 @@ class CMSRegistry:
                 ]
                 if qs.exists():
                     recent[key] = {
-                        "label": key.replace("_", " ").title(),
-                        "icon": config.stat_icon,
-                        "color": config.stat_color,
-                        "items": qs,
+                        "label":    key.replace("_", " ").title(),
+                        "icon":     config.stat_icon,
+                        "color":    config.stat_color,
+                        "items":    qs,
                         "list_url": config.list_url,
                     }
             except Exception:
-                # Fail-safe: don't break dashboard if one model errors
+                # Fail-safe: don't break the dashboard if one model errors.
                 continue
 
         return recent
@@ -164,5 +179,5 @@ class CMSRegistry:
         return config.supports_sort if config else False
 
 
-# Module-level singleton — import this everywhere
+# Module-level singleton — import this everywhere.
 cms_registry = CMSRegistry()
