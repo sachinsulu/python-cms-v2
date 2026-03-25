@@ -22,8 +22,8 @@ class ArticleListView(ContentListView):
 
     def get_queryset(self):
         qs = Article.objects.select_related('image', 'author')
-        filter = self.request.session.get('article_homepage_filter', '0')
-        return qs.filter(homepage=(filter == '1'))
+        homepage_filter = self.request.session.get('article_homepage_filter', '0')
+        return qs.filter(homepage=(homepage_filter == '1'))
 
     def get(self, request):
         hp = request.GET.get('homepage')

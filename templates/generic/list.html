@@ -46,7 +46,7 @@
         {% endfor %}
 
         {# Actions column is always the last #}
-        <th>Actions</th>
+        {% block table_header_actions %}<th>Actions</th>{% endblock table_header_actions %}
       </tr>
     </thead>
 
@@ -165,6 +165,7 @@
         {% endfor %}
 
         {# ── Actions column (always last) ── #}
+        {% block table_row_cell_actions %}
         <td>
           <div class="action-group">
             {% if edit_url_name %}
@@ -178,6 +179,7 @@
             </button>
           </div>
         </td>
+        {% endblock table_row_cell_actions %}
 
       </tr>
       {% endfor %}

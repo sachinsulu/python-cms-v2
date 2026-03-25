@@ -16,3 +16,8 @@ class Testimonial(SimpleContentModel):
 
     class Meta(SimpleContentModel.Meta):
         verbose_name_plural = 'Testimonials'
+
+    def __str__(self):
+        if self.name:
+            return f"{self.name} — {self.title}"
+        return self.title

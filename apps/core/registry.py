@@ -57,6 +57,16 @@ class CMSModelConfig:
         self.recent_ordering = recent_ordering
         self.parent_field    = parent_field
 
+    def __repr__(self) -> str:
+        return (
+            f"CMSModelConfig(model={self.model.__name__!r}, "
+            f"list_url={self.list_url!r}, "
+            f"active_field={self.active_field!r})"
+        )
+
+    def __str__(self) -> str:
+        return f"CMSModelConfig<{self.model.__name__}>"
+
 
 class CMSRegistry:
     """
@@ -70,6 +80,11 @@ class CMSRegistry:
     def register(self, key: str, config: CMSModelConfig):
         if key in self._registry:
             raise ValueError(f"CMS model key '{key}' is already registered.")
+        if not hasattr(config.model, "_meta"):
+            raise TypeError(
+                f"config.model for key '{key}' does not appear to be a Django model. "
+                f"Got: {config.model!r}"
+            )
         self._registry[key] = config
 
     def get(self, key: str) -> CMSModelConfig | None:
@@ -112,7 +127,7 @@ class CMSRegistry:
             stats.append(
                 {
                     "label":    key.replace("_", " ").title(),
-                    "count":    config.model.objects.count(),
+                    "count":    config.model.objects.active().count(),
                     "icon":     config.stat_icon,
                     "color":    config.stat_color,
                     "list_url": config.list_url,
@@ -141,15 +156,18 @@ class CMSRegistry:
                     continue
 
             try:
-                qs = config.model.objects.order_by(config.recent_ordering)[
-                    : config.recent_limit
-                ]
-                if qs.exists():
+                # Materialise to a list so we pay exactly one DB query.
+                # qs.exists() would be a second round-trip; list() is not.
+                items = list(
+                    config.model.objects
+                    .order_by(config.recent_ordering)[: config.recent_limit]
+                )
+                if items:
                     recent[key] = {
                         "label":    key.replace("_", " ").title(),
                         "icon":     config.stat_icon,
                         "color":    config.stat_color,
-                        "items":    qs,
+                        "items":    items,
                         "list_url": config.list_url,
                     }
             except Exception:

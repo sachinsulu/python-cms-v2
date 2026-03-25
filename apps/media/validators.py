@@ -40,6 +40,7 @@ _SKIP_MAGIC: frozenset = frozenset({
     'mp4', 'mov', 'avi', 'mkv', 'webm',
     'doc', 'docx', 'xls', 'xlsx',
     'txt', 'csv', 'bmp', 'ico',
+    'heic',  # HEIC uses the ISOBMFF container; magic bytes vary by encoder
 })
 
 _HEADER_BYTES = 16

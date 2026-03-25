@@ -1,7 +1,5 @@
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
 from django.utils.text import slugify
 
 from .mixins_models import (
@@ -11,6 +9,7 @@ from .mixins_models import (
     SortableMixin,
     TimestampMixin,
 )
+from .querysets.base import ActiveQuerySet, ContentQuerySet
 
 
 class GlobalSlug(models.Model):
@@ -61,6 +60,8 @@ class BaseContentModel(
     - Auto slug generation
     - Atomic position assignment
     - GlobalSlug maintenance (upsert on save, delete on signal)
+    - ContentQuerySet as default manager (.published(), .draft(),
+      .by_position(), .recent(), .for_api())
 
     Slug uniqueness strategy (three layers):
       1. Form layer  — SlugUniqueMixin.clean_slug() does ONE query against
@@ -73,7 +74,33 @@ class BaseContentModel(
 
     clean() is intentionally absent — slug validation belongs in the
     form layer, not the model layer.
+
+    Partial save contract (update_fields):
+    ----------------------------------------
+    Calling save(update_fields=[...]) short-circuits the full save path —
+    position assignment, slug generation, and GlobalSlug maintenance are
+    all skipped. This is intentional and safe ONLY for fields that do not
+    influence the slug or GlobalSlug invariants (e.g. is_active, position).
+
+    Fields in IMMUTABLE_ON_PARTIAL are protected: passing them inside
+    update_fields raises ValueError immediately rather than silently
+    corrupting the GlobalSlug table or leaving slug/title out of sync.
+
+    Subclasses that derive slug from fields beyond 'title' should extend
+    the set at the class level:
+        class Room(BaseContentModel):
+            IMMUTABLE_ON_PARTIAL = BaseContentModel.IMMUTABLE_ON_PARTIAL | {'room_number'}
     """
+
+    # Fields whose presence in save(update_fields=...) is forbidden.
+    # Both influence slug generation and/or GlobalSlug integrity and must
+    # always go through the full save path.
+    IMMUTABLE_ON_PARTIAL: frozenset = frozenset({"slug", "title"})
+
+    # ContentQuerySet gives every concrete subclass .published(), .draft(),
+    # .by_position(), .recent(), and .for_api() as first-class manager methods.
+    # Standard ORM methods (.filter(), .get(), .only(), etc.) are unaffected.
+    objects = ContentQuerySet.as_manager()
 
     title = models.CharField(max_length=255)
 
@@ -82,6 +109,35 @@ class BaseContentModel(
         ordering = ["position"]
 
     def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+
+        if update_fields is not None:
+            # ----------------------------------------------------------------
+            # Partial save — fast path.
+            #
+            # Skips: position assignment, slug auto-generation, GlobalSlug
+            # upsert, and the transaction.atomic() wrapper. Safe because none
+            # of those invariants change when only non-slug fields are updated
+            # (e.g. toggle_status passing update_fields=['is_active']).
+            #
+            # Guard: reject any update_fields list that contains a field whose
+            # mutation has side-effects on the slug or GlobalSlug table. A
+            # ValueError here is intentional — silent data corruption is worse
+            # than a loud crash during development.
+            # ----------------------------------------------------------------
+            unsafe = self.IMMUTABLE_ON_PARTIAL.intersection(update_fields)
+            if unsafe:
+                raise ValueError(
+                    f"{self.__class__.__name__}.save(update_fields=...) "
+                    f"cannot include {sorted(unsafe)!r}. "
+                    "These fields have side-effects (slug generation, GlobalSlug "
+                    "sync) that require the full save() path. "
+                    "Call save() without update_fields instead."
+                )
+            super().save(*args, **kwargs)
+            return
+
+        # Full save path — all invariants enforced inside one atomic block.
         with transaction.atomic():
             self._assign_position()
 
@@ -91,7 +147,12 @@ class BaseContentModel(
             old_slug = None
             if self.pk:
                 try:
-                    old_slug = self.__class__.objects.only("slug").get(pk=self.pk).slug
+                    old_slug = (
+                        self.__class__._default_manager
+                        .only("slug")
+                        .get(pk=self.pk)
+                        .slug
+                    )
                 except self.__class__.DoesNotExist:
                     pass
 
@@ -122,7 +183,19 @@ class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Mode
     """
     Lightweight base for CMS models that don't need SEO or slugs.
     No GlobalSlug involvement — these models carry no slug field.
+
+    Uses ContentQuerySet as default manager so .published(), .draft(),
+    .by_position(), and .recent() are available on all subclasses without
+    any per-model boilerplate.
+
+    Partial save contract:
+    ----------------------
+    save(update_fields=[...]) short-circuits position assignment and the
+    atomic wrapper. Safe for all field combinations — SimpleContentModel
+    has no slug or GlobalSlug invariants to protect.
     """
+
+    objects = ContentQuerySet.as_manager()
 
     title = models.CharField(max_length=255)
 
@@ -131,6 +204,13 @@ class SimpleContentModel(TimestampMixin, ActiveMixin, SortableMixin, models.Mode
         ordering = ["position"]
 
     def save(self, *args, **kwargs):
+        # Partial saves (e.g. toggle_status) skip position assignment and the
+        # atomic wrapper — position does not change on field-specific updates,
+        # and there are no slug invariants to enforce on this base class.
+        if kwargs.get("update_fields") is not None:
+            super().save(*args, **kwargs)
+            return
+
         with transaction.atomic():
             self._assign_position()
             super().save(*args, **kwargs)
@@ -183,6 +263,7 @@ class AuditLog(models.Model):
         indexes = [
             models.Index(fields=["model_name", "object_id"]),
             models.Index(fields=["user", "timestamp"]),
+            models.Index(fields=["timestamp"], name="core_auditlog_timestamp_idx"),
         ]
 
     def __str__(self):
@@ -190,16 +271,16 @@ class AuditLog(models.Model):
         return f"[{self.timestamp:%Y-%m-%d %H:%M}] {user} {self.action} {self.model_name}:{self.object_id}"
 
 
-@receiver(post_delete)
-def remove_global_slug_on_delete(sender, instance, **kwargs):
+def _remove_global_slug(sender, instance, **kwargs):
     """
-    Ensure the GlobalSlug entry is removed when any BaseContentModel
-    instance is deleted. This catches QuerySet.delete() (bulk deletes)
-    as well as regular instance.delete().
+    Remove the GlobalSlug row when a BaseContentModel instance is deleted.
+
+    Handles both QuerySet.delete() (bulk deletes) and instance.delete().
+
+    Not decorated with @receiver — connected selectively in CoreConfig.ready()
+    only for concrete BaseContentModel subclasses, so it never fires on
+    unrelated models (e.g. User, MediaAsset, Permission) and never pays the
+    cost of the isinstance() guard on every post_delete signal in the project.
     """
-    if (
-        isinstance(instance, BaseContentModel)
-        and hasattr(instance, "slug")
-        and instance.slug
-    ):
+    if hasattr(instance, "slug") and instance.slug:
         GlobalSlug.objects.filter(slug=instance.slug).delete()

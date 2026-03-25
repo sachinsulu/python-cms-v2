@@ -4,6 +4,7 @@ from apps.media.api import MediaAssetSerializer
 
 
 
+
 class SocialSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     image = MediaAssetSerializer(read_only=True)
@@ -14,12 +15,12 @@ class SocialSerializer(serializers.ModelSerializer):
 
 
 class SocialViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = Social.objects.filter(is_active=True).select_related('image').order_by('position')
+    queryset         = Social.objects.published().select_related('image')
     serializer_class = SocialSerializer
 
     def get_queryset(self):
-        qs   = super().get_queryset()
-        type = self.request.query_params.get('type')
-        if type in (Social.TYPE_SOCIAL, Social.TYPE_OTA):
-            qs = qs.filter(type=type)
+        qs          = super().get_queryset()
+        type_filter = self.request.query_params.get('type')
+        if type_filter in (Social.TYPE_SOCIAL, Social.TYPE_OTA):
+            qs = qs.filter(type=type_filter)
         return qs

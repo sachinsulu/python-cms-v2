@@ -106,7 +106,6 @@ class DashboardView(View):
 # ------------------------------------------------------------------ #
 
 
-@method_decorator(login_required, name="dispatch")
 class AuditLogView(SuperuserRequiredMixin, View):
     def get(self, request):
         logs = AuditLog.objects.select_related("user").all()[:200]
@@ -243,10 +242,11 @@ def bulk_action(request, model_key):
 
     if action == "delete":
         count = qs.count()
-        log_bulk_action(
-            request, AuditLog.BULK_DELETE, config.model.__name__, count, selected_ids
-        )
-        qs.delete()
+        with transaction.atomic():
+            log_bulk_action(
+                request, AuditLog.BULK_DELETE, config.model.__name__, count, selected_ids
+            )
+            qs.delete()
         invalidate_dashboard_cache()
         return JsonResponse({"success": True, "message": f"{count} items deleted."})
 
@@ -269,6 +269,12 @@ def update_order(request, model_key):
 
     if not order:
         return JsonResponse({"error": "Empty order list"}, status=400)
+
+    if len(order) > 500:
+        return JsonResponse(
+            {"error": "Order payload too large. Maximum 500 items per request."},
+            status=400,
+        )
 
     with transaction.atomic():
         qs = (
@@ -322,7 +328,7 @@ def update_order(request, model_key):
 
         obj_map   = {obj.pk: obj for obj in qs}
         to_update = []
-        for position, obj_id in enumerate(order):
+        for position, obj_id in enumerate(order, start=1):
             if obj_id in obj_map:
                 obj_map[obj_id].position = position
                 to_update.append(obj_map[obj_id])

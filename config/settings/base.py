@@ -6,7 +6,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 DEBUG = False  # Overridden to True in development.py
 
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "INSECURE-PLACEHOLDER-REPLACE-IN-PRODUCTION",
+)
 
 INSTALLED_APPS = [
     # Django core

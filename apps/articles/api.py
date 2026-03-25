@@ -16,7 +16,7 @@ class ArticleSerializer(serializers.ModelSerializer):
 
 
 class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = Article.objects.filter(is_active=True).select_related('image').order_by('position')
+    queryset         = Article.objects.published().select_related('image')
     serializer_class = ArticleSerializer
     lookup_field     = 'slug'
     filter_backends  = [filters.SearchFilter]

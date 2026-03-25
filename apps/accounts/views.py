@@ -3,10 +3,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import Group
 from django.contrib import messages
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
+
 
 from apps.core.mixins import CMSPermissionMixin, SuperuserRequiredMixin
+from apps.core.cache import invalidate_dashboard_cache
 from .forms import LoginForm, UserCreateForm, GroupForm
 
 User = get_user_model()
@@ -47,14 +47,12 @@ class LogoutView(View):
 # User management (superuser only)
 # ------------------------------------------------------------------ #
 
-@method_decorator(login_required, name='dispatch')
 class UserListView(SuperuserRequiredMixin, View):
     def get(self, request):
         users = User.objects.prefetch_related('groups').order_by('username')
         return render(request, 'users/list.html', {'users': users})
 
 
-@method_decorator(login_required, name='dispatch')
 class UserCreateView(SuperuserRequiredMixin, View):
     def get(self, request):
         return render(request, 'users/form.html', {'form': UserCreateForm(), 'is_edit': False})
@@ -68,7 +66,6 @@ class UserCreateView(SuperuserRequiredMixin, View):
         return render(request, 'users/form.html', {'form': form, 'is_edit': False})
 
 
-@method_decorator(login_required, name='dispatch')
 class UserEditView(SuperuserRequiredMixin, View):
     def get_user(self, pk):
         return get_object_or_404(User, pk=pk)
@@ -83,12 +80,12 @@ class UserEditView(SuperuserRequiredMixin, View):
         form = UserCreateForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
+            invalidate_dashboard_cache()
             messages.success(request, 'User updated successfully.')
             return redirect('user_list')
         return render(request, 'users/form.html', {'form': form, 'is_edit': True, 'object': user})
 
 
-@method_decorator(login_required, name='dispatch')
 class UserDeleteView(SuperuserRequiredMixin, View):
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk)
@@ -98,6 +95,7 @@ class UserDeleteView(SuperuserRequiredMixin, View):
             messages.error(request, 'Cannot delete your own account.')
         else:
             user.delete()
+            invalidate_dashboard_cache()
             messages.success(request, f'User "{user.username}" deleted.')
         return redirect('user_list')
 
@@ -106,14 +104,12 @@ class UserDeleteView(SuperuserRequiredMixin, View):
 # Group management (superuser only)
 # ------------------------------------------------------------------ #
 
-@method_decorator(login_required, name='dispatch')
 class GroupListView(SuperuserRequiredMixin, View):
     def get(self, request):
         groups = Group.objects.prefetch_related('permissions').order_by('name')
         return render(request, 'users/group_list.html', {'groups': groups})
 
 
-@method_decorator(login_required, name='dispatch')
 class GroupCreateView(SuperuserRequiredMixin, View):
     def get(self, request):
         return render(request, 'users/group_form.html', {'form': GroupForm(), 'is_edit': False})
@@ -127,7 +123,6 @@ class GroupCreateView(SuperuserRequiredMixin, View):
         return render(request, 'users/group_form.html', {'form': form, 'is_edit': False})
 
 
-@method_decorator(login_required, name='dispatch')
 class GroupEditView(SuperuserRequiredMixin, View):
     def get(self, request, pk):
         group = get_object_or_404(Group, pk=pk)
@@ -138,16 +133,17 @@ class GroupEditView(SuperuserRequiredMixin, View):
         form  = GroupForm(request.POST, instance=group)
         if form.is_valid():
             form.save()
+            invalidate_dashboard_cache()
             messages.success(request, 'Group updated.')
             return redirect('group_list')
         return render(request, 'users/group_form.html', {'form': form, 'is_edit': True, 'object': group})
 
 
-@method_decorator(login_required, name='dispatch')
 class GroupDeleteView(SuperuserRequiredMixin, View):
     def post(self, request, pk):
         group = get_object_or_404(Group, pk=pk)
         group_name = group.name
         group.delete()
+        invalidate_dashboard_cache()
         messages.success(request, f'Group "{group_name}" deleted.')
         return redirect('group_list')

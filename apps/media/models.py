@@ -4,11 +4,12 @@ import threading
 from io import BytesIO
 from pathlib import Path
 
-from django.db import models
+from django.db import models, connection
 from django.conf import settings
 from django.core.files.base import ContentFile
 
 from apps.core.mixins_models import TimestampMixin, ActiveMixin
+from apps.core.querysets.base import ActiveQuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,11 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
         related_name='media_assets',
     )
 
+    # ActiveQuerySet gives .active() and .inactive() as first-class manager
+    # methods. MediaAsset deliberately does NOT use ContentQuerySet because
+    # its ordering is by -created_at (not position) and it has no slug field.
+    objects = ActiveQuerySet.as_manager()
+
     class Meta:
         ordering            = ['-created_at']
         verbose_name        = 'Media Asset'
@@ -96,6 +102,16 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
         Runs in a background daemon thread.
         Re-fetches the instance by pk for a clean DB connection,
         then writes dimensions + WebP thumbnail back via update_fields.
+
+        Connection management:
+        ----------------------
+        Django does not automatically close database connections opened in
+        non-request threads. Without an explicit close() the connection is
+        held open until the thread exits (daemon threads may never exit
+        cleanly), leaking a slot from the database connection pool.
+
+        The finally block below guarantees the connection is returned
+        regardless of whether the thumbnail generation succeeded or failed.
         """
         try:
             instance = MediaAsset.objects.get(pk=pk)
@@ -125,6 +141,12 @@ class MediaAsset(TimestampMixin, ActiveMixin, models.Model):
 
         except Exception as exc:
             logger.warning('Thumbnail generation failed pk=%s: %s', pk, exc)
+
+        finally:
+            # Always release the DB connection back to the pool.
+            # Safe to call even if no queries were made — Django is a no-op
+            # when there is no active connection to close.
+            connection.close()
 
     def _make_thumbnail(self, img, size=(600, 400), quality=85) -> bool:
         try:

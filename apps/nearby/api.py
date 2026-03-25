@@ -11,7 +11,7 @@ class NearbySerializer(serializers.ModelSerializer):
 
 
 class NearbyViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset         = Nearby.objects.filter(is_active=True).order_by('position')
+    queryset         = Nearby.objects.published()
     serializer_class = NearbySerializer
     filter_backends  = [filters.SearchFilter]
     search_fields    = ['title', 'content']

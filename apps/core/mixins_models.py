@@ -104,9 +104,13 @@ class SortableMixin(models.Model):
 
 
 class SlugMixin(models.Model):
-    # db_index omitted — uniqueness is enforced via GlobalSlug.slug (PK),
-    # which is already indexed at the DB level.
-    slug = models.SlugField(blank=True)
+    # db_index=True is required here even though GlobalSlug.slug (PK) is
+    # already indexed. GlobalSlug is used for cross-model uniqueness checking
+    # only. Actual object lookups — get_object_or_404(Article, slug=slug),
+    # ContentUpdateView.get_object(), and all API slug-based detail endpoints
+    # — query the model's own table directly. Without this index those
+    # lookups are full table scans.
+    slug = models.SlugField(blank=True, db_index=True)
 
     class Meta:
         abstract = True

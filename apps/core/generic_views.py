@@ -22,16 +22,30 @@ Built-in magic column keys (handled by the template without get_attr):
 
 Custom rendering beyond the built-ins is handled via the
 `column_renderers` dict (see SubPackageListView for an example).
+
+Service layer
+-------------
+ContentCreateView.post() and ContentUpdateView.post() delegate their
+create/update logic to apps.core.services.content_service.  That module
+is the single source of truth for:
+
+  - form.save(commit=False)
+  - before_save_fn hook execution
+  - obj.save()
+  - dashboard cache invalidation
+  - AuditLog entry creation
+
+The before_save() hook defined on each subclass is forwarded to the
+service as a before_save_fn callback so subclasses can still set
+author, parent FK, flags, etc. without knowing about the service.
 """
-from django.views import View
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views import View
 
 from .mixins import CMSPermissionMixin
-from .audit import log_action
-from .cache import invalidate_dashboard_cache
-from .models import AuditLog
+from .services.content_service import create_object, update_object
 
 
 class ContentListView(CMSPermissionMixin, View):
@@ -49,6 +63,7 @@ class ContentListView(CMSPermissionMixin, View):
         edit_url_name       URL name for the per-row edit link
         list_columns        List of (field_path, header_label) tuples
     """
+
     model         = None
     template      = 'generic/list.html'
     extra_context = None
@@ -87,8 +102,12 @@ class ContentCreateView(CMSPermissionMixin, View):
 
     Hooks:
         before_save(request, obj)  — set author, flags, parent FK, etc.
+                                     Forwarded to content_service as
+                                     before_save_fn so all side-effectful
+                                     field assignments happen before obj.save().
         get_success_redirect(obj)  — override for custom post-save redirect.
     """
+
     model         = None
     form_class    = None
     template      = 'generic/form.html'
@@ -102,10 +121,7 @@ class ContentCreateView(CMSPermissionMixin, View):
         return self.extra_context or {}
 
     def _build_context(self, form):
-        """
-        Single source of truth for the create-view template context.
-        Replaces the 3 copy-pasted inline dicts from the original.
-        """
+        """Single source of truth for the create-view template context."""
         return {
             'form':       form,
             'page_title': self.page_title or f'Add {self.model.__name__}',
@@ -119,7 +135,11 @@ class ContentCreateView(CMSPermissionMixin, View):
         return self.form_class(data, files)
 
     def before_save(self, request, obj):
-        pass
+        """
+        Hook called after form.save(commit=False) and before obj.save().
+        Override in subclasses to set fields the form doesn't know about
+        (e.g. author from request.user, parent FK, flags from session).
+        """
 
     def get_success_redirect(self, obj):
         action = self.request.POST.get('action', 'save')
@@ -138,11 +158,14 @@ class ContentCreateView(CMSPermissionMixin, View):
     def post(self, request):
         form = self.get_form(request.POST, request.FILES)
         if form.is_valid():
-            obj = form.save(commit=False)
-            self.before_save(request, obj)
-            obj.save()
-            invalidate_dashboard_cache()
-            log_action(request, AuditLog.CREATE, obj)
+            # Delegate to the service layer — single source of truth for:
+            #   form.save(commit=False) → before_save hook → obj.save()
+            #   → cache invalidation → AuditLog CREATE entry.
+            obj = create_object(
+                request,
+                form,
+                before_save_fn=lambda req, o: self.before_save(req, o),
+            )
             messages.success(request, f'"{obj}" created successfully.')
             return self.get_success_redirect(obj)
 
@@ -153,7 +176,13 @@ class ContentUpdateView(CMSPermissionMixin, View):
     """
     Generic update view for a content model.
     Looked up by slug by default — override get_object() for pk lookups.
+
+    Hooks:
+        before_save(request, obj)  — forwarded to content_service as
+                                     before_save_fn.
+        get_success_redirect(obj)  — override for custom post-save redirect.
     """
+
     model         = None
     form_class    = None
     template      = 'generic/form.html'
@@ -167,10 +196,7 @@ class ContentUpdateView(CMSPermissionMixin, View):
         return self.extra_context or {}
 
     def _build_context(self, form, obj):
-        """
-        Single source of truth for the update-view template context.
-        Replaces the 2 copy-pasted inline dicts from the original.
-        """
+        """Single source of truth for the update-view template context."""
         return {
             'form':       form,
             'object':     obj,
@@ -192,7 +218,10 @@ class ContentUpdateView(CMSPermissionMixin, View):
         return self.form_class(data, files, instance=instance)
 
     def before_save(self, request, obj):
-        pass
+        """
+        Hook called after form.save(commit=False) and before obj.save().
+        Override in subclasses to mutate the object before persistence.
+        """
 
     def get_success_redirect(self, obj):
         action = self.request.POST.get('action', 'save')
@@ -212,25 +241,21 @@ class ContentUpdateView(CMSPermissionMixin, View):
         form = self.get_form(obj, request.POST, request.FILES)
 
         if form.is_valid():
-            old_values = {
-                field: str(getattr(obj, field))
-                for field in form.changed_data
-                if hasattr(obj, field)
-            }
-            updated = form.save(commit=False)
-            self.before_save(request, updated)
-            updated.save()
-            invalidate_dashboard_cache()
-
-            new_values = {
-                field: str(getattr(updated, field))
-                for field in form.changed_data
-                if hasattr(updated, field)
-            }
-            log_action(request, AuditLog.UPDATE, updated, changes={
-                'before': old_values,
-                'after':  new_values,
-            })
+            # form.changed_data is captured here (before the service mutates
+            # the instance) and passed to update_object() so that the AuditLog
+            # entry records accurate before/after values for changed fields.
+            #
+            # Delegate to the service layer — single source of truth for:
+            #   before-value snapshot → form.save(commit=False)
+            #   → before_save hook → obj.save() → after-value snapshot
+            #   → cache invalidation → AuditLog UPDATE entry.
+            updated = update_object(
+                request,
+                form,
+                obj,
+                before_save_fn=lambda req, o: self.before_save(req, o),
+                changed_fields=form.changed_data,
+            )
             messages.success(request, f'"{updated}" saved.')
             return self.get_success_redirect(updated)
 

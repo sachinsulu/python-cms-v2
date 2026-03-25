@@ -18,34 +18,13 @@
 {% endblock %}
 
 {#
-  Override the Actions column cell so the edit link includes the parent slug.
-  We still get the generic delete button behaviour for free.
-  The table_row block is NOT overridden — we only need the Actions override.
-  We do this by overriding the entire table_row so the edit URL is correct.
+  Override only the Actions cell — the two-arg subpackage_edit URL cannot be
+  expressed with the generic edit_url_name (which resolves with a single slug).
+  generic/list.html exposes {% block table_row_cell_actions %} exactly for
+  this purpose.  All other columns, DataTables, sorting, and bulk actions
+  continue to come from the parent template unchanged.
 #}
-{% block table_headers %}
-<th>Title</th>
-<th>Slug</th>
-<th>Price</th>
-<th>Capacity</th>
-<th>Status</th>
-<th>Actions</th>
-{% endblock %}
-
-{% block table_row %}
-<td>
-  <a href="{% url 'subpackage_edit' subpackage_parent_slug obj.slug %}">{{ obj.title }}</a>
-</td>
-<td class="text-mono text-muted text-sm">{{ obj.slug }}</td>
-<td class="text-muted text-sm">{{ obj.price|default:"—" }}</td>
-<td class="text-muted text-sm">{{ obj.capacity|default:"—" }}</td>
-<td>
-  <div class="toggle-wrap"
-       data-toggle-url="{% url 'toggle_status' 'subpackage' obj.pk %}"
-       title="Toggle status">
-    <div class="toggle-switch {% if obj.is_active %}on{% endif %}"></div>
-  </div>
-</td>
+{% block table_row_cell_actions %}
 <td>
   <div class="action-group">
     <a href="{% url 'subpackage_edit' subpackage_parent_slug obj.slug %}"
@@ -58,4 +37,4 @@
     </button>
   </div>
 </td>
-{% endblock %}
+{% endblock table_row_cell_actions %}
